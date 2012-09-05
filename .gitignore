@@ -1,0 +1,8 @@
+*.html
+__pycache__
+*.py?
+*,cover
+*.inv
+*.js
+_*
+.*

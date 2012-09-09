@@ -30,11 +30,13 @@ except ImportError:
         stderr = property(lambda self: self[2])
 import os
 import subprocess
+import sys
 
 __all__ = ['shell','pipe','PIPE','STDOUT']
 # Mirror some subprocess constants
 PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
+PY3 = sys.version_info[0] == 3
 
 class Shell(object):
     """The magic shell class that finds executables on your $PATH"""
@@ -93,6 +95,9 @@ class Command(object):
                 if stream not in kwargs:
                     kwargs[stream] = PIPE
         self.input = kwargs.pop('input','')
+        self.charset = kwargs.pop('charset',None)
+        if PY3 and hasattr(self.input, 'encode') and self.charset:
+            self.input = self.input.encode(self.charset)
         self.defer = kwargs.pop('defer', self.defer)
         self.kwargs = kwargs
         if not self.defer:
@@ -100,6 +105,11 @@ class Command(object):
             sp = subprocess.Popen([str(self.name)] +
                     [str(x) for x in self.args], **(self.kwargs))
             (out, err) = sp.communicate(self.input)
+            if PY3 and self.charset:
+                if hasattr(out, 'decode'):
+                    out = out.decode(self.charset)
+                if hasattr(err, 'decode'):
+                    err = err.decode(self.charset)
             return Result(sp.returncode, out, err)
         # When defering, return ourselves
         self.next = self.prev = None
@@ -118,7 +128,7 @@ class Command(object):
         if not hasattr(self, 'args') or not hasattr(other, 'args'):
             raise ValueError("Command not called yet")
         # Can't chain something with input behind something else
-        if hasattr(other, 'input') and other.input != '':
+        if hasattr(other, 'input') and other.input:
             raise ValueError("Cannot chain a command with input")
         # Yes, we can!
         self.next = other
@@ -149,6 +159,9 @@ class Command(object):
             proc = proc.prev
 
         (out, err) = sp.communicate(input)
+        if PY3 and self.charset:
+            out = out.decode(self.charset)
+            err = err.decode(self.charset)
 
         sp.stdin = old_stdin
 
@@ -167,9 +180,7 @@ pipe = Pipe()
 # Testing is good. Must test.
 if __name__ == '__main__':
     import unittest
-    import sys
 
-    PY3 = sys.version_info[0] == 3
     if PY3:
         b = lambda x: x.encode('latin-1')
     else:
@@ -286,5 +297,26 @@ if __name__ == '__main__':
             self.assertEqual(r.returncode, [0,0,0])
             self.assertEqual(r.stdout, input)
             self.assertEqual(r.stderr, b(''))
+
+        def test_charset(self):
+            input = "Hello, world!"
+            r = pipe(
+                pipe.caesar(10, input=input, charset='utf-8') |
+                pipe.caesar(10) |
+                pipe.caesar(6, charset='utf-8')
+            )
+            self.assertEqual(r.returncode, [0,0,0])
+            self.assertEqual(r.stdout, input)
+            self.assertEqual(r.stderr, '')
+
+            r = shell.rot13(input=input, charset='utf-8')
+            self.assertEqual(r.returncode, 0)
+            if PY3:
+                rot13 = str.maketrans('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                                         'nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM')
+                self.assertEqual(input.translate(rot13), r.stdout)
+            else:
+                self.assertEqual(input.encode('rot13'), r.stdout)
+            self.assertEqual(r.stderr, '')
 
     unittest.main()

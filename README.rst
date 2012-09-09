@@ -88,4 +88,7 @@ Whelk is compatible with python 2.4 and up, including python 3. If you find an
 incompatibility, please report a bug at https://github.com/seveas/whelk.
 
 Note that on python 3, subprocesses require :class:`bytes` objects as input and
-will return :class:`bytes` objects as output.
+will return :class:`bytes` objects as output. You can specify an encoding for a
+command to make whelk do the encoding/decoding for you::
+
+  kernel_says = shell.dmesg('-t', charset='latin-1')

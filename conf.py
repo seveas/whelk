@@ -1,6 +1,6 @@
 import cloud_sptheme as csp
 source_suffix = '.rst'
-master_doc = 'README'
+master_doc = 'index'
 project = u'whelk'
 copyright = u'2010-2012, Dennis Kaarsemaker'
 version = '1.0'

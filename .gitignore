@@ -6,3 +6,6 @@ __pycache__
 *.js
 _*
 .*
+dist
+build
+MANIFEST

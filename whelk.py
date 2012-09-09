@@ -29,7 +29,6 @@ except ImportError:
         stdout = property(lambda self: self[1])
         stderr = property(lambda self: self[2])
 import os
-import os.path
 import subprocess
 
 __all__ = ['shell','pipe','PIPE','STDOUT']
@@ -61,9 +60,10 @@ class Shell(object):
                     return Command(p,defer=defer)
                 # Try a translation from _ to - as python identifiers can't
                 # contain -
-                p = os.path.join(d, name_)
-                if os.access(p, os.X_OK):
-                    return Command(p,defer=defer)
+                if name != name_:
+                    p = os.path.join(d, name_)
+                    if os.access(p, os.X_OK):
+                        return Command(p,defer=defer)
             raise
 
 class Pipe(Shell):

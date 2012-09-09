@@ -14,6 +14,8 @@ setup(name = "whelk",
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Programming Language :: Python',
-        'Topic :: System :: Networking',
+        'Operating System :: POSIX',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+
       ]
 )

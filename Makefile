@@ -1,7 +1,8 @@
 release:
+	git push origin master
 	python setup.py register sdist bdist_dumb upload
 
-gh-docs:
+gh-docs: clean
 	git checkout gh-pages
 	git checkout master README.rst conf.py
 	mv README.rst index.rst

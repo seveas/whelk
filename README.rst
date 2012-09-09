@@ -85,7 +85,7 @@ Some examples::
 Python compatibility
 --------------------
 Whelk is compatible with python 2.4 and up, including python 3. If you find an
-incompatibility, please report a bug at https://githiub.com/seveas/whelk.
+incompatibility, please report a bug at https://github.com/seveas/whelk.
 
 Note that on python 3, subprocesses require :class:`bytes` objects as input and
 will return :class:`bytes` objects as output.

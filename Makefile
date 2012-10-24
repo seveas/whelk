@@ -1,3 +1,5 @@
+dummmy:
+
 release:
 	git push origin master
 	python setup.py register sdist bdist_dumb upload

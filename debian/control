@@ -9,7 +9,7 @@ X-Python3-Version: >= 3.1
 Vcs-Git: http://github.com/seveas/python-prctl
 
 Package: python-whelk
-Architecture: any
+Architecture: all
 Depends: ${python:Depends}, ${shlibs:Depends}, ${misc:Depends}
 Description: Pretending python is a shell
  We all like python for scripting, because it's so much more powerful than a
@@ -18,7 +18,7 @@ Description: Pretending python is a shell
  dependency.
 
 Package: python3-whelk
-Architecture: any
+Architecture: all
 Depends: ${python3:Depends}, ${shlibs:Depends}, ${misc:Depends}
 Description: Pretending python is a shell
  We all like python for scripting, because it's so much more powerful than a

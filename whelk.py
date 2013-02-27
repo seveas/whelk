@@ -45,6 +45,9 @@ class Shell(object):
     PIPE = PIPE
     STDOUT = STDOUT
 
+    def __init__(self, encoding=None):
+        self.encoding = encoding
+
     def __getattr__(self, name):
         # Real functionality factored out for subclass purposes. super()
         # instances cannot really do __getattr__
@@ -59,13 +62,13 @@ class Shell(object):
             for d in os.environ['PATH'].split(':'):
                 p = os.path.join(d, name)
                 if os.access(p, os.X_OK):
-                    return Command(p,defer=defer)
+                    return Command(p,defer=defer,encoding=self.encoding)
                 # Try a translation from _ to - as python identifiers can't
                 # contain -
                 if name != name_:
                     p = os.path.join(d, name_)
                     if os.access(p, os.X_OK):
-                        return Command(p,defer=defer)
+                        return Command(p,defer=defer,encoding=self.encoding)
             raise
 
 class Pipe(Shell):
@@ -81,9 +84,10 @@ class Pipe(Shell):
 class Command(object):
     """A subprocess wrapper that executes the program when called or when
        combined with the or operator for pipes"""
-    def __init__(self, name=None, defer=False):
+    def __init__(self, name=None, defer=False, encoding=None):
         self.name = str(name)
         self.defer = defer
+        self.encoding = encoding
 
     def __call__(self, *args, **kwargs):
         """Save arguments, execute a subprocess unless we need to be defered"""
@@ -95,9 +99,11 @@ class Command(object):
                 if stream not in kwargs:
                     kwargs[stream] = PIPE
         self.input = kwargs.pop('input','')
-        self.charset = kwargs.pop('charset',None)
-        if PY3 and hasattr(self.input, 'encode') and self.charset:
-            self.input = self.input.encode(self.charset)
+        self.encoding = kwargs.pop('encoding', self.encoding)
+        # Backwards compatibility
+        self.encoding = kwargs.pop('charset', self.encoding)
+        if PY3 and hasattr(self.input, 'encode') and self.encoding:
+            self.input = self.input.encode(self.encoding)
         self.defer = kwargs.pop('defer', self.defer)
         self.kwargs = kwargs
         if not self.defer:
@@ -105,11 +111,11 @@ class Command(object):
             sp = subprocess.Popen([str(self.name)] +
                     [str(x) for x in self.args], **(self.kwargs))
             (out, err) = sp.communicate(self.input)
-            if PY3 and self.charset:
+            if PY3 and self.encoding:
                 if hasattr(out, 'decode'):
-                    out = out.decode(self.charset)
+                    out = out.decode(self.encoding)
                 if hasattr(err, 'decode'):
-                    err = err.decode(self.charset)
+                    err = err.decode(self.encoding)
             return Result(sp.returncode, out, err)
         # When defering, return ourselves
         self.next = self.prev = None
@@ -159,9 +165,9 @@ class Command(object):
             proc = proc.prev
 
         (out, err) = sp.communicate(input)
-        if PY3 and self.charset:
-            out = out.decode(self.charset)
-            err = err.decode(self.charset)
+        if PY3 and self.encoding:
+            out = out.decode(self.encoding)
+            err = err.decode(self.encoding)
 
         sp.stdin = old_stdin
 
@@ -298,18 +304,18 @@ if __name__ == '__main__':
             self.assertEqual(r.stdout, input)
             self.assertEqual(r.stderr, b(''))
 
-        def test_charset(self):
+        def test_encoding(self):
             input = "Hello, world!"
             r = pipe(
-                pipe.caesar(10, input=input, charset='utf-8') |
+                pipe.caesar(10, input=input, encoding='utf-8') |
                 pipe.caesar(10) |
-                pipe.caesar(6, charset='utf-8')
+                pipe.caesar(6, encoding='utf-8')
             )
             self.assertEqual(r.returncode, [0,0,0])
             self.assertEqual(r.stdout, input)
             self.assertEqual(r.stderr, '')
 
-            r = shell.rot13(input=input, charset='utf-8')
+            r = shell.rot13(input=input, encoding='utf-8')
             self.assertEqual(r.returncode, 0)
             if PY3:
                 rot13 = str.maketrans('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -318,5 +324,11 @@ if __name__ == '__main__':
             else:
                 self.assertEqual(input.encode('rot13'), r.stdout)
             self.assertEqual(r.stderr, '')
+
+        def test_encoding2(self):
+            input = '\u041f\u0440\u0438\u0432\u0435\u0442, \u043c\u0438\u0440!'
+            s = Shell(encoding='utf-8')
+            r = s.cat(input=input)
+            self.assertEqual(input, r.stdout)
 
     unittest.main()

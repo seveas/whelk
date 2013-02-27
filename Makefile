@@ -2,7 +2,7 @@ dummmy:
 
 release:
 	git push origin master
-	python setup.py register sdist bdist_dumb upload
+	python setup.py register sdist upload
 
 gh-docs: clean
 	git checkout gh-pages

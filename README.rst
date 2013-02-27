@@ -91,4 +91,10 @@ Note that on python 3, subprocesses require :class:`bytes` objects as input and
 will return :class:`bytes` objects as output. You can specify an encoding for a
 command to make whelk do the encoding/decoding for you::
 
-  kernel_says = shell.dmesg('-t', charset='latin-1')
+  kernel_says = shell.dmesg('-t', encoding='latin-1')
+
+You can also make all commands launched by a Shell instance do this::
+
+  from whelk import Shell
+  shell = Shell(encoding='utf-8')
+  kernel_says = shell.dmesg('-t')

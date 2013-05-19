@@ -226,6 +226,8 @@ def _communicate_with_poll(self, input):
         poller.unregister(fd)
         fd2file[fd].close()
         fd2file.pop(fd)
+        if self.output_callback:
+            self.output_callback(self, fd, None, *self.output_callback_args, **self.output_callback_kwargs)
 
     if self.stdin and input:
         register_and_append(self.stdin, select.POLLOUT)
@@ -425,12 +427,17 @@ if __name__ == '__main__':
 
         def test_callback(self):
             chunks = []
+            seen_eof = {}
             def cb(sp, fd, data, *args, **kwargs):
+                if data is None:
+                    seen_eof[fd] = True
+                    return
                 chunks.append(data)
             r = shell.dmesg(output_callback=cb)
             self.assertEqual(r.returncode, 0)
             self.assertTrue(len(chunks) > 1)
             self.assertEqual(r.stdout, b('').join(chunks))
+            self.assertEqual(list(seen_eof.values()), [True, True])
 
         def test_defaults(self):
             s = Shell(stdout = shell.STDOUT)

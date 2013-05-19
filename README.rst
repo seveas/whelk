@@ -58,13 +58,16 @@ Some examples::
 Another difference is the :data:`output_callback` argument, which allows you to
 process output as soon as it arrives. Whenever output arrives, this callback
 will be called with as arguments the subprocess, the filedescriptor the data
-came in on, the actual data and any (keyword) arguments you passed as
-:data:`output_callback_args` and/or :data:`output_callback_kwargs` to the
-command. Here's an example that uses this feature for logging::
+came in on, the actual data (or :data:`None` in case of EOF) and any (keyword)
+arguments you passed as :data:`output_callback_args` and/or
+:data:`output_callback_kwargs` to the command. Here's an example that uses this
+feature for logging::
 
   def cb(sp, fd, data, *args, **kwargs):
+      if data is None:
+          logging.debug("<%d:%d> File descriptor closed" % (sp.pid, fd.fileno()))
       for line in data.splitlines():
-          logging.debug("<%d:%d> %s" % (sp.pid, fd.fileno, line))
+          logging.debug("<%d:%d> %s" % (sp.pid, fd.fileno(), line))
 
   shell.dmesg(output_callback=cb)
 

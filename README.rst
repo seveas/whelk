@@ -95,6 +95,20 @@ Some examples::
   cow = random.choice(os.listdir('/usr/share/cowsay/cows'))
   result = pipe(pipe.fortune("-s") | pipe.cowsay("-n", "-f", cow))
 
+Setting default arguments
+-------------------------
+If you want to launch many commands with the same parameters, you can set
+defaults by passing parameters to the :class:`Shell` constructor. These are
+passed on to all commands launched by that shell, unless overridden in specific
+calls::
+
+   from whelk import Shell
+   my_env = os.environ.copy()
+   my_env['http_proxy'] = 'http://webproxy.corp:3128'
+   shell = Shell(stderr=Shell.STDOUT, env=my_env)
+
+   shell.wget("http://google.com", "-o", "google.html")
+
 Python compatibility
 --------------------
 Whelk is compatible with python 2.4 and up, including python 3. If you find an

@@ -49,8 +49,8 @@ class Shell(object):
     PIPE = PIPE
     STDOUT = STDOUT
 
-    def __init__(self, encoding=None):
-        self.encoding = encoding
+    def __init__(self, **kwargs):
+        self.defaults = kwargs
 
     def __getattr__(self, name):
         # Real functionality factored out for subclass purposes. super()
@@ -66,13 +66,13 @@ class Shell(object):
             for d in os.environ['PATH'].split(':'):
                 p = os.path.join(d, name)
                 if os.access(p, os.X_OK):
-                    return Command(p,defer=defer,encoding=self.encoding)
+                    return Command(p,defer=defer,defaults=self.defaults)
                 # Try a translation from _ to - as python identifiers can't
                 # contain -
                 if name != name_:
                     p = os.path.join(d, name_)
                     if os.access(p, os.X_OK):
-                        return Command(p,defer=defer,encoding=self.encoding)
+                        return Command(p,defer=defer,defaults=self.defaults)
             raise
 
 class Pipe(Shell):
@@ -89,10 +89,10 @@ class Command(object):
     """A subprocess wrapper that executes the program when called or when
        combined with the or operator for pipes"""
 
-    def __init__(self, name=None, defer=False, encoding=None):
+    def __init__(self, name=None, defer=False, defaults={}):
         self.name = str(name)
         self.defer = defer
-        self.encoding = encoding
+        self.defaults = defaults
 
     def __call__(self, *args, **kwargs):
         """Save arguments, execute a subprocess unless we need to be defered"""
@@ -104,18 +104,26 @@ class Command(object):
                 if stream not in kwargs:
                     kwargs[stream] = PIPE
         self.input = kwargs.pop('input','')
-        self.encoding = kwargs.pop('encoding', self.encoding)
+        self.encoding = kwargs.pop('encoding', self.defaults.get('encoding', None))
         # Backwards compatibility
         self.encoding = kwargs.pop('charset', self.encoding)
         if PY3 and hasattr(self.input, 'encode') and self.encoding:
             self.input = self.input.encode(self.encoding)
         self.defer = kwargs.pop('defer', self.defer)
-        self.kwargs = kwargs
-        self.output_callback = kwargs.pop('output_callback', None)
-        self.output_callback_args = kwargs.pop('output_callback_args', [])
-        self.output_callback_kwargs = kwargs.pop('output_callback_kwargs', {})
+        self.output_callback = kwargs.pop('output_callback', self.defaults.get('output_callback', None))
+        self.output_callback_args = kwargs.pop('output_callback_args', self.defaults.get('output_callback_args', []))
+        self.output_callback_kwargs = kwargs.pop('output_callback_kwargs', self.defaults.get('output_callback_kwargs', {}))
         if self.output_callback and not _output_callback_supported:
             raise EnvironmentError("Output callbacks are not supported on your system")
+
+        self.kwargs = kwargs
+        if PY3:
+            all_kwargs = subprocess.Popen.__init__.__code__.co_varnames[2:subprocess.Popen.__init__.__code__.co_argcount]
+        else:
+            all_kwargs = subprocess.Popen.__init__.im_func.func_code.co_varnames[2:subprocess.Popen.__init__.im_func.func_code.co_argcount]
+        for kwarg in all_kwargs:
+            if kwarg in self.defaults and kwarg not in self.kwargs:
+                self.kwargs[kwarg] = self.defaults[kwarg]
 
         if not self.defer:
             # No need to defer, so call ourselves
@@ -423,5 +431,12 @@ if __name__ == '__main__':
             self.assertEqual(r.returncode, 0)
             self.assertTrue(len(chunks) > 1)
             self.assertEqual(r.stdout, b('').join(chunks))
+
+        def test_defaults(self):
+            s = Shell(stdout = shell.STDOUT)
+            input = b("Testing 1 2 3")
+            r = s.cat(input=input)
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(r.stdout, input)
 
     unittest.main()

@@ -133,17 +133,16 @@ class Command(object):
 
         self.kwargs = kwargs
         if PY3:
-            all_kwargs = subprocess.Popen.__init__.__code__.co_varnames[2:subprocess.Popen.__init__.__code__.co_argcount]
+            all_kwargs = Popen.__init__.__code__.co_varnames[2:Popen.__init__.__code__.co_argcount]
         else:
-            all_kwargs = subprocess.Popen.__init__.im_func.func_code.co_varnames[2:subprocess.Popen.__init__.im_func.func_code.co_argcount]
+            all_kwargs = Popen.__init__.im_func.func_code.co_varnames[2:Popen.__init__.im_func.func_code.co_argcount]
         for kwarg in all_kwargs:
             if kwarg in self.defaults and kwarg not in self.kwargs:
                 self.kwargs[kwarg] = self.defaults[kwarg]
 
         if not self.defer:
             # No need to defer, so call ourselves
-            sp = subprocess.Popen([str(self.name)] +
-                    [str(x) for x in self.args], **(self.kwargs))
+            sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
             sp.output_callback = self.output_callback
             sp.output_callback_args = self.output_callback_args
             sp.output_callback_kwargs = self.output_callback_kwargs
@@ -178,13 +177,13 @@ class Command(object):
         other.prev = self
         r, w = os.pipe()
         self.kwargs['stdout'] = PIPE
-        self.sp = subprocess.Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        self.sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
         other.kwargs['stdin'] = self.sp.stdout
         return other
 
     def run_pipe(self):
         """Run the last command in the pipe and collect returncodes"""
-        sp = subprocess.Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
         sp.output_callback = self.output_callback
         sp.output_callback_args = self.output_callback_args
         sp.output_callback_kwargs = self.output_callback_kwargs
@@ -223,74 +222,72 @@ class Command(object):
 shell = Shell()
 pipe = Pipe()
 
-# Monkeypatch a method onto subprocess that allows callbacks to be called for
-# each block of input. Copied from python2.7's subprocess.py and modified.
-_PIPE_BUF = subprocess._PIPE_BUF
-def _communicate_with_poll(self, input):
-    stdout = None # Return
-    stderr = None # Return
-    fd2file = {}
-    fd2output = {}
+# Subclass Popen to add output callbacks
+class Popen(subprocess.Popen):
+    def _communicate_with_poll(self, input):
+        stdout = None # Return
+        stderr = None # Return
+        fd2file = {}
+        fd2output = {}
 
-    poller = select.poll()
-    def register_and_append(file_obj, eventmask):
-        poller.register(file_obj.fileno(), eventmask)
-        fd2file[file_obj.fileno()] = file_obj
+        poller = select.poll()
+        def register_and_append(file_obj, eventmask):
+            poller.register(file_obj.fileno(), eventmask)
+            fd2file[file_obj.fileno()] = file_obj
 
-    def close_unregister_and_remove(fd):
-        poller.unregister(fd)
-        fd2file[fd].close()
-        fd2file.pop(fd)
-        if self.output_callback:
-            self.output_callback(self, fd, None, *self.output_callback_args, **self.output_callback_kwargs)
+        def close_unregister_and_remove(fd):
+            poller.unregister(fd)
+            fd2file[fd].close()
+            fd2file.pop(fd)
+            if self.output_callback:
+                self.output_callback(self, fd, None, *self.output_callback_args, **self.output_callback_kwargs)
 
-    if self.stdin and input:
-        register_and_append(self.stdin, select.POLLOUT)
+        if self.stdin and input:
+            register_and_append(self.stdin, select.POLLOUT)
 
-    select_POLLIN_POLLPRI = select.POLLIN | select.POLLPRI
-    if self.stdout:
-        register_and_append(self.stdout, select_POLLIN_POLLPRI)
-        fd2output[self.stdout.fileno()] = stdout = []
-    if self.stderr:
-        register_and_append(self.stderr, select_POLLIN_POLLPRI)
-        fd2output[self.stderr.fileno()] = stderr = []
+        select_POLLIN_POLLPRI = select.POLLIN | select.POLLPRI
+        if self.stdout:
+            register_and_append(self.stdout, select_POLLIN_POLLPRI)
+            fd2output[self.stdout.fileno()] = stdout = []
+        if self.stderr:
+            register_and_append(self.stderr, select_POLLIN_POLLPRI)
+            fd2output[self.stderr.fileno()] = stderr = []
 
-    input_offset = 0
-    while fd2file:
-        try:
-            ready = poller.poll()
-        except select.error:
-            e = sys.exc_info[1]
-            if e.args[0] == errno.EINTR:
-                continue
-            raise
+        input_offset = 0
+        while fd2file:
+            try:
+                ready = poller.poll()
+            except select.error:
+                e = sys.exc_info[1]
+                if e.args[0] == errno.EINTR:
+                    continue
+                raise
 
-        for fd, mode in ready:
-            if mode & select.POLLOUT:
-                chunk = input[input_offset : input_offset + _PIPE_BUF]
-                try:
-                    input_offset += os.write(fd, chunk)
-                except OSError as e:
-                    if e.errno == errno.EPIPE:
-                        close_unregister_and_remove(fd)
+            for fd, mode in ready:
+                if mode & select.POLLOUT:
+                    chunk = input[input_offset : input_offset + subprocess._PIPE_BUF]
+                    try:
+                        input_offset += os.write(fd, chunk)
+                    except OSError as e:
+                        if e.errno == errno.EPIPE:
+                            close_unregister_and_remove(fd)
+                        else:
+                            raise
                     else:
-                        raise
-                else:
-                    if input_offset >= len(input):
+                        if input_offset >= len(input):
+                            close_unregister_and_remove(fd)
+                elif mode & select_POLLIN_POLLPRI:
+                    data = os.read(fd, 4096)
+                    if self.output_callback:
+                        self.output_callback(self, fd, data, *self.output_callback_args, **self.output_callback_kwargs)
+                    if not data:
                         close_unregister_and_remove(fd)
-            elif mode & select_POLLIN_POLLPRI:
-                data = os.read(fd, 4096)
-                if self.output_callback:
-                    self.output_callback(self, fd, data, *self.output_callback_args, **self.output_callback_kwargs)
-                if not data:
+                    fd2output[fd].append(data)
+                else:
+                    # Ignore hang up or errors.
                     close_unregister_and_remove(fd)
-                fd2output[fd].append(data)
-            else:
-                # Ignore hang up or errors.
-                close_unregister_and_remove(fd)
 
-    return (stdout, stderr)
-subprocess.Popen._communicate_with_poll = _communicate_with_poll
+        return (stdout, stderr)
 
 # Testing is good. Must test.
 if __name__ == '__main__':

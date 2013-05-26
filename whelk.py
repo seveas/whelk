@@ -57,29 +57,44 @@ class Shell(object):
         # instances cannot really do __getattr__
         return self._getattr(name, defer=False)
 
+    def __getitem__(self, name):
+        return self._getitem(name, defer=False)
+
     def _getattr(self, name, defer):
         """Locate the command on the PATH"""
         try:
             return super(Shell, self).__getattribute__(name)
         except AttributeError:
-            name_ = name.replace('_','-')
-            for d in os.environ['PATH'].split(':'):
-                p = os.path.join(d, name)
+            cmd = self._getitem(name, defer, try_path=False)
+            if not cmd:
+                raise
+            return cmd
+
+    def _getitem(self, name, defer, try_path=True):
+        if try_path and '/' in name and os.access(name, os.X_OK):
+            return Command(name,defer=defer,defaults=self.defaults)
+        name_ = name.replace('_','-')
+        for d in os.environ['PATH'].split(':'):
+            p = os.path.join(d, name)
+            if os.access(p, os.X_OK):
+                return Command(p,defer=defer,defaults=self.defaults)
+            # Try a translation from _ to - as python identifiers can't
+            # contain -
+            if name != name_:
+                p = os.path.join(d, name_)
                 if os.access(p, os.X_OK):
                     return Command(p,defer=defer,defaults=self.defaults)
-                # Try a translation from _ to - as python identifiers can't
-                # contain -
-                if name != name_:
-                    p = os.path.join(d, name_)
-                    if os.access(p, os.X_OK):
-                        return Command(p,defer=defer,defaults=self.defaults)
-            raise
+        if try_path:
+            raise KeyError("Command '%s' not found" % name)
 
 class Pipe(Shell):
     """Shell subclass that returns defered commands"""
     def __getattr__(self, name):
         """Return defered commands"""
         return self._getattr(name, defer=True)
+
+    def __getitem__(self, name):
+        return self._getitem(name, defer=True)
 
     def __call__(self, cmd):
         """Run the last command in the pipeline and return data"""
@@ -290,6 +305,7 @@ if __name__ == '__main__':
         def test_notfound(self):
             # Non-existing command
             self.assertRaises(AttributeError, lambda: shell.cd)
+            self.assertRaises(KeyError, lambda: shell['/not/found'])
 
         def test_basic(self):
             # Basic command test
@@ -297,6 +313,17 @@ if __name__ == '__main__':
             self.assertEqual(r.returncode, 0)
             self.assertEqual(r.stderr, b(''))
             self.assertTrue(r.stdout != (''))
+
+            v = '.'.join([str(x) for x in sys.version_info[:3]])
+            r = shell[sys.executable]('-V')
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(r.stdout, b(''))
+            self.assertTrue(b(v) in r.stderr)
+
+            r = shell[os.path.basename(sys.executable)]('-V')
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(r.stdout, b(''))
+            self.assertTrue(b(v) in r.stderr)
 
         def test_underscores(self):
             # Underscore-replacement

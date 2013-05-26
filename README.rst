@@ -40,6 +40,11 @@ The :class:`whelk.shell` object can be used to call any command on your
 contain a "-", it will find those even if you spell it with a "_". So e.g.
 :file:`run-parts` can be found as :func:`shell.run_parts`.
 
+If your command is not valid as a python identifier, even after substituting
+dashes for underscores, you can using the :class:`shell` object as a dict. This
+dict also accepts full paths to commands, even if they are not on your
+:data:`$PATH`.
+
 Attributes of the :class:`shell` instance are all callables. Arguments to this
 callable get mapped to arguments to the command via a :class:`subprocess.Popen`
 object. Keyword arguments get mapped to keyword arguments for the
@@ -54,6 +59,10 @@ Some examples::
   result = shell.cat(input="Hello world!")
   
   result = shell.vipe(input="Some data I want to edit in an editor")
+
+  result = shell['2to3']('awesome.py')
+
+  result = shell['./Configure']('-des', '-Dusedevel')
 
 Another difference is the :data:`output_callback` argument, which allows you to
 process output as soon as it arrives. Whenever output arrives, this callback

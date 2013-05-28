@@ -1,3 +1,9 @@
+whelk (1.6-1) quantal; urgency=low
+
+  * New upstream release
+
+ -- Dennis Kaarsemaker <dennis@kaarsemaker.net>  Tue, 28 May 2013 23:48:38 +0200
+
 whelk (1.5-1) quantal; urgency=low
 
   * New upstream release

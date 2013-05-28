@@ -126,10 +126,14 @@ class Command(object):
             self.input = self.input.encode(self.encoding)
         self.defer = kwargs.pop('defer', self.defer)
         self.output_callback = kwargs.pop('output_callback', self.defaults.get('output_callback', None))
-        self.output_callback_args = kwargs.pop('output_callback_args', self.defaults.get('output_callback_args', []))
-        self.output_callback_kwargs = kwargs.pop('output_callback_kwargs', self.defaults.get('output_callback_kwargs', {}))
+        if callable(self.output_callback):
+            self.output_callback = [self.output_callback]
         if self.output_callback and not _output_callback_supported:
             raise EnvironmentError("Output callbacks are not supported on your system")
+        self.exit_callback = kwargs.pop('exit_callback', self.defaults.get('exit_callback', None))
+        if callable(self.exit_callback):
+            self.exit_callback = [self.exit_callback]
+        self.raise_on_error = kwargs.pop('raise_on_error', self.defaults.get('raise_on_error', False))
 
         self.kwargs = kwargs
         if PY3:
@@ -144,15 +148,19 @@ class Command(object):
             # No need to defer, so call ourselves
             sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
             sp.output_callback = self.output_callback
-            sp.output_callback_args = self.output_callback_args
-            sp.output_callback_kwargs = self.output_callback_kwargs
+            sp.shell = self
             (out, err) = sp.communicate(self.input)
             if PY3 and self.encoding:
                 if hasattr(out, 'decode'):
                     out = out.decode(self.encoding)
                 if hasattr(err, 'decode'):
                     err = err.decode(self.encoding)
-            return Result(sp.returncode, out, err)
+            res = Result(sp.returncode, out, err)
+            if self.exit_callback:
+                self.exit_callback[0](self, sp, res, *self.exit_callback[1:])
+            if self.raise_on_error and res.returncode:
+                raise CommandFailed(res)
+            return res
         # When defering, return ourselves
         self.next = self.prev = None
         return self
@@ -178,15 +186,15 @@ class Command(object):
         r, w = os.pipe()
         self.kwargs['stdout'] = PIPE
         self.sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        self.sp.shell = self
         other.kwargs['stdin'] = self.sp.stdout
         return other
 
     def run_pipe(self):
         """Run the last command in the pipe and collect returncodes"""
         sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        sp.shell = self
         sp.output_callback = self.output_callback
-        sp.output_callback_args = self.output_callback_args
-        sp.output_callback_kwargs = self.output_callback_kwargs
 
         # Ugly fudging of file descriptors to make communicate() work
         old_stdin = sp.stdin
@@ -215,7 +223,17 @@ class Command(object):
         while proc:
             returncodes.insert(0, proc.sp.wait())
             proc = proc.prev
-        return Result(returncodes, out, err)
+        res = Result(returncodes, out, err)
+        if self.exit_callback:
+            self.exit_callback[0](self, sp, res, *self.exit_callback[1:])
+        if self.raise_on_error and res.returncode.count(0) != len(res.returncode):
+            raise CommandFailed(res)
+        return res
+
+class CommandFailed(RuntimeError):
+    def __init__(self, result):
+        self.result = result
+        return super(CommandFailed, self).__init__(result.stderr)
 
 # You really only need one Shell or Pipe instance, so let's create one and recommend to
 # use it.
@@ -240,7 +258,7 @@ class Popen(subprocess.Popen):
             fd2file[fd].close()
             fd2file.pop(fd)
             if self.output_callback:
-                self.output_callback(self, fd, None, *self.output_callback_args, **self.output_callback_kwargs)
+                self.output_callback[0](self.shell, self, fd, None, *self.output_callback[1:])
 
         if self.stdin and input:
             register_and_append(self.stdin, select.POLLOUT)
@@ -279,7 +297,7 @@ class Popen(subprocess.Popen):
                 elif mode & select_POLLIN_POLLPRI:
                     data = os.read(fd, 4096)
                     if self.output_callback:
-                        self.output_callback(self, fd, data, *self.output_callback_args, **self.output_callback_kwargs)
+                        self.output_callback[0](self.shell, self, fd, data, *self.output_callback[1:])
                     if not data:
                         close_unregister_and_remove(fd)
                     fd2output[fd].append(data)
@@ -452,16 +470,26 @@ if __name__ == '__main__':
         def test_callback(self):
             chunks = []
             seen_eof = {}
-            def cb(sp, fd, data, *args, **kwargs):
+            def cb(shell, sp, fd, data, arg):
+                self.assertEqual(arg, 'hello')
                 if data is None:
                     seen_eof[fd] = True
                     return
                 chunks.append(data)
-            r = shell.dmesg(output_callback=cb)
+            r = shell.dmesg(output_callback=[cb, 'hello'])
             self.assertEqual(r.returncode, 0)
             self.assertTrue(len(chunks) > 1)
             self.assertEqual(r.stdout, b('').join(chunks))
             self.assertEqual(list(seen_eof.values()), [True, True])
+
+            cb_called = []
+            def cb(shell, sp, res):
+                self.assertEqual(sp.returncode, 0)
+                cb_called.append(True)
+
+            shell.true(exit_callback=cb)
+            pipe(pipe.true()|pipe.true(exit_callback=cb))
+            self.assertEqual(cb_called, [True, True])
 
         def test_defaults(self):
             s = Shell(stdout = shell.STDOUT)
@@ -469,5 +497,27 @@ if __name__ == '__main__':
             r = s.cat(input=input)
             self.assertEqual(r.returncode, 0)
             self.assertEqual(r.stdout, input)
+
+        def test_raises(self):
+            s = Shell(raise_on_error=True) 
+            self.assertRaises(CommandFailed, s.false)
+
+            try:
+                s.grep('whatever', '/does/not/exist')
+            except:
+                t,v,tb = sys.exc_info()
+                self.assertEqual(CommandFailed, t)
+                self.assertEqual(v.result.returncode, 2)
+            else:
+                self.fail("No exception was raised")
+
+            try:
+                pipe(pipe.dmesg()|pipe.grep("snuffleupagus", raise_on_error=True))
+            except:
+                t,v,tb = sys.exc_info()
+                self.assertEqual(CommandFailed, t)
+                self.assertEqual(v.result.returncode.count(1), 1)
+            else:
+                self.fail("No exception was raised")
 
     unittest.main()

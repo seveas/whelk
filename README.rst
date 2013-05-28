@@ -40,38 +40,75 @@ The :class:`whelk.shell` object can be used to call any command on your
 contain a "-", it will find those even if you spell it with a "_". So e.g.
 :file:`run-parts` can be found as :func:`shell.run_parts`.
 
+If your command is not valid as a python identifier, even after substituting
+dashes for underscores, you can using the :class:`shell` object as a dict. This
+dict also accepts full paths to commands, even if they are not on your
+:data:`$PATH`.
+
 Attributes of the :class:`shell` instance are all callables. Arguments to this
 callable get mapped to arguments to the command via a :class:`subprocess.Popen`
 object. Keyword arguments get mapped to keyword arguments for the
-:class:`Popen` object.
+:class:`Popen` object.  Shell commands return a namedtuple :data:`(returncode,
+stdout, stderr)`::
 
-One important difference is that :data:`stdin`/:data:`stdout`/:data:`stderr`
-are set to :data:`whelk.PIPE` by default. Input for the command can be passed
-as the :data:`input` keyword parameter.
+    result = shell.netstat('-tlpn')
 
-Some examples::
+    result = shell.git('status', cwd='/home/dennis/code/whelk')
 
-  result = shell.cat(input="Hello world!")
-  
-  result = shell.vipe(input="Some data I want to edit in an editor")
+    result = shell['2to3']('awesome.py')
 
-Another difference is the :data:`output_callback` argument, which allows you to
-process output as soon as it arrives. Whenever output arrives, this callback
-will be called with as arguments the subprocess, the filedescriptor the data
-came in on, the actual data (or :data:`None` in case of EOF) and any (keyword)
-arguments you passed as :data:`output_callback_args` and/or
-:data:`output_callback_kwargs` to the command. Here's an example that uses this
-feature for logging::
+    result = shell['./Configure']('-des', '-Dusedevel')
 
-  def cb(sp, fd, data, *args, **kwargs):
-      if data is None:
-          logging.debug("<%d:%d> File descriptor closed" % (sp.pid, fd.fileno()))
-      for line in data.splitlines():
-          logging.debug("<%d:%d> %s" % (sp.pid, fd.fileno(), line))
+In addition to the :class:`subprocess.Popen` arguments, whelk supports a few
+more keyword arguments:
 
-  shell.dmesg(output_callback=cb)
+* :data:`input`
 
-Shell commands return a namedtuple :data:`(returncode, stdout, stderr)`.
+  Contrary to the :mod:`subprocess` defaults, :data:`stdin`, :data:`stdout`
+  and :data:`stderr` are set to :data:`whelk.PIPE` by default. Input for the
+  command can be passed as the :data:`input` keyword parameter.
+
+  Some examples::
+
+    result = shell.cat(input="Hello world!")
+
+    result = shell.vipe(input="Some data I want to edit in an editor")
+
+* :data:`output_callback`
+
+  To process output as soon as it arrives, specify a callback to use. Whenever
+  output arrives, this callback will be called with as arguments the shell
+  instance, the subprocess, the filedescriptor the data came in on, the actual
+  data (or :data:`None` in case of EOF) and any user-specified arguments .
+  Here's an example that uses this feature for logging::
+
+    def cb(shell, sp, fd, data, extra=""):
+        if data is None:
+            logging.debug("%s<%d:%d> File descriptor closed" % (extra, sp.pid, fd))
+        for line in data.splitlines():
+            logging.debug("%s<%d:%d> %s" % (extra, sp.pid, fd, line))
+
+    shell.dmesg(output_callback=cb)
+    shell.mount(output_callback=[cb, "Mountpoints: "])
+
+* :data:`raise_on_error`
+
+  This makes your shell even more pythonic: instead of returning an errorcode,
+  a :class:`CommandFailed` exception is raised whenever a command returns with
+  a nonzero exitcode.
+
+* :data:`exit_callback`
+
+  If you want slightly more fine-grained control than :data:`raise_on_error`,
+  you can use this argument to specify a callable to call whenever a process
+  exits, irrespective of the returncode. The callback will be called with as
+  arguments the shell instance, the subprocess, the result tuple and any
+  user-provided arguments.
+
+  Both :data:`raise_on_exit` and :data:`exit_callback` are ost useful when set
+  as a default of a :class:`Shell` instance, they are not really needed when
+  calling single commands.
+
 
 Piping commands together
 ------------------------

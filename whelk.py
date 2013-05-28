@@ -57,29 +57,44 @@ class Shell(object):
         # instances cannot really do __getattr__
         return self._getattr(name, defer=False)
 
+    def __getitem__(self, name):
+        return self._getitem(name, defer=False)
+
     def _getattr(self, name, defer):
         """Locate the command on the PATH"""
         try:
             return super(Shell, self).__getattribute__(name)
         except AttributeError:
-            name_ = name.replace('_','-')
-            for d in os.environ['PATH'].split(':'):
-                p = os.path.join(d, name)
+            cmd = self._getitem(name, defer, try_path=False)
+            if not cmd:
+                raise
+            return cmd
+
+    def _getitem(self, name, defer, try_path=True):
+        if try_path and '/' in name and os.access(name, os.X_OK):
+            return Command(name,defer=defer,defaults=self.defaults)
+        name_ = name.replace('_','-')
+        for d in os.environ['PATH'].split(':'):
+            p = os.path.join(d, name)
+            if os.access(p, os.X_OK):
+                return Command(p,defer=defer,defaults=self.defaults)
+            # Try a translation from _ to - as python identifiers can't
+            # contain -
+            if name != name_:
+                p = os.path.join(d, name_)
                 if os.access(p, os.X_OK):
                     return Command(p,defer=defer,defaults=self.defaults)
-                # Try a translation from _ to - as python identifiers can't
-                # contain -
-                if name != name_:
-                    p = os.path.join(d, name_)
-                    if os.access(p, os.X_OK):
-                        return Command(p,defer=defer,defaults=self.defaults)
-            raise
+        if try_path:
+            raise KeyError("Command '%s' not found" % name)
 
 class Pipe(Shell):
     """Shell subclass that returns defered commands"""
     def __getattr__(self, name):
         """Return defered commands"""
         return self._getattr(name, defer=True)
+
+    def __getitem__(self, name):
+        return self._getitem(name, defer=True)
 
     def __call__(self, cmd):
         """Run the last command in the pipeline and return data"""
@@ -111,34 +126,41 @@ class Command(object):
             self.input = self.input.encode(self.encoding)
         self.defer = kwargs.pop('defer', self.defer)
         self.output_callback = kwargs.pop('output_callback', self.defaults.get('output_callback', None))
-        self.output_callback_args = kwargs.pop('output_callback_args', self.defaults.get('output_callback_args', []))
-        self.output_callback_kwargs = kwargs.pop('output_callback_kwargs', self.defaults.get('output_callback_kwargs', {}))
+        if callable(self.output_callback):
+            self.output_callback = [self.output_callback]
         if self.output_callback and not _output_callback_supported:
             raise EnvironmentError("Output callbacks are not supported on your system")
+        self.exit_callback = kwargs.pop('exit_callback', self.defaults.get('exit_callback', None))
+        if callable(self.exit_callback):
+            self.exit_callback = [self.exit_callback]
+        self.raise_on_error = kwargs.pop('raise_on_error', self.defaults.get('raise_on_error', False))
 
         self.kwargs = kwargs
         if PY3:
-            all_kwargs = subprocess.Popen.__init__.__code__.co_varnames[2:subprocess.Popen.__init__.__code__.co_argcount]
+            all_kwargs = Popen.__init__.__code__.co_varnames[2:Popen.__init__.__code__.co_argcount]
         else:
-            all_kwargs = subprocess.Popen.__init__.im_func.func_code.co_varnames[2:subprocess.Popen.__init__.im_func.func_code.co_argcount]
+            all_kwargs = Popen.__init__.im_func.func_code.co_varnames[2:Popen.__init__.im_func.func_code.co_argcount]
         for kwarg in all_kwargs:
             if kwarg in self.defaults and kwarg not in self.kwargs:
                 self.kwargs[kwarg] = self.defaults[kwarg]
 
         if not self.defer:
             # No need to defer, so call ourselves
-            sp = subprocess.Popen([str(self.name)] +
-                    [str(x) for x in self.args], **(self.kwargs))
+            sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
             sp.output_callback = self.output_callback
-            sp.output_callback_args = self.output_callback_args
-            sp.output_callback_kwargs = self.output_callback_kwargs
+            sp.shell = self
             (out, err) = sp.communicate(self.input)
             if PY3 and self.encoding:
                 if hasattr(out, 'decode'):
                     out = out.decode(self.encoding)
                 if hasattr(err, 'decode'):
                     err = err.decode(self.encoding)
-            return Result(sp.returncode, out, err)
+            res = Result(sp.returncode, out, err)
+            if self.exit_callback:
+                self.exit_callback[0](self, sp, res, *self.exit_callback[1:])
+            if self.raise_on_error and res.returncode:
+                raise CommandFailed(res)
+            return res
         # When defering, return ourselves
         self.next = self.prev = None
         return self
@@ -163,16 +185,16 @@ class Command(object):
         other.prev = self
         r, w = os.pipe()
         self.kwargs['stdout'] = PIPE
-        self.sp = subprocess.Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        self.sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        self.sp.shell = self
         other.kwargs['stdin'] = self.sp.stdout
         return other
 
     def run_pipe(self):
         """Run the last command in the pipe and collect returncodes"""
-        sp = subprocess.Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        sp.shell = self
         sp.output_callback = self.output_callback
-        sp.output_callback_args = self.output_callback_args
-        sp.output_callback_kwargs = self.output_callback_kwargs
 
         # Ugly fudging of file descriptors to make communicate() work
         old_stdin = sp.stdin
@@ -201,81 +223,89 @@ class Command(object):
         while proc:
             returncodes.insert(0, proc.sp.wait())
             proc = proc.prev
-        return Result(returncodes, out, err)
+        res = Result(returncodes, out, err)
+        if self.exit_callback:
+            self.exit_callback[0](self, sp, res, *self.exit_callback[1:])
+        if self.raise_on_error and res.returncode.count(0) != len(res.returncode):
+            raise CommandFailed(res)
+        return res
+
+class CommandFailed(RuntimeError):
+    def __init__(self, result):
+        self.result = result
+        return super(CommandFailed, self).__init__(result.stderr)
 
 # You really only need one Shell or Pipe instance, so let's create one and recommend to
 # use it.
 shell = Shell()
 pipe = Pipe()
 
-# Monkeypatch a method onto subprocess that allows callbacks to be called for
-# each block of input. Copied from python2.7's subprocess.py and modified.
-_PIPE_BUF = subprocess._PIPE_BUF
-def _communicate_with_poll(self, input):
-    stdout = None # Return
-    stderr = None # Return
-    fd2file = {}
-    fd2output = {}
+# Subclass Popen to add output callbacks
+class Popen(subprocess.Popen):
+    def _communicate_with_poll(self, input):
+        stdout = None # Return
+        stderr = None # Return
+        fd2file = {}
+        fd2output = {}
 
-    poller = select.poll()
-    def register_and_append(file_obj, eventmask):
-        poller.register(file_obj.fileno(), eventmask)
-        fd2file[file_obj.fileno()] = file_obj
+        poller = select.poll()
+        def register_and_append(file_obj, eventmask):
+            poller.register(file_obj.fileno(), eventmask)
+            fd2file[file_obj.fileno()] = file_obj
 
-    def close_unregister_and_remove(fd):
-        poller.unregister(fd)
-        fd2file[fd].close()
-        fd2file.pop(fd)
-        if self.output_callback:
-            self.output_callback(self, fd, None, *self.output_callback_args, **self.output_callback_kwargs)
+        def close_unregister_and_remove(fd):
+            poller.unregister(fd)
+            fd2file[fd].close()
+            fd2file.pop(fd)
+            if self.output_callback:
+                self.output_callback[0](self.shell, self, fd, None, *self.output_callback[1:])
 
-    if self.stdin and input:
-        register_and_append(self.stdin, select.POLLOUT)
+        if self.stdin and input:
+            register_and_append(self.stdin, select.POLLOUT)
 
-    select_POLLIN_POLLPRI = select.POLLIN | select.POLLPRI
-    if self.stdout:
-        register_and_append(self.stdout, select_POLLIN_POLLPRI)
-        fd2output[self.stdout.fileno()] = stdout = []
-    if self.stderr:
-        register_and_append(self.stderr, select_POLLIN_POLLPRI)
-        fd2output[self.stderr.fileno()] = stderr = []
+        select_POLLIN_POLLPRI = select.POLLIN | select.POLLPRI
+        if self.stdout:
+            register_and_append(self.stdout, select_POLLIN_POLLPRI)
+            fd2output[self.stdout.fileno()] = stdout = []
+        if self.stderr:
+            register_and_append(self.stderr, select_POLLIN_POLLPRI)
+            fd2output[self.stderr.fileno()] = stderr = []
 
-    input_offset = 0
-    while fd2file:
-        try:
-            ready = poller.poll()
-        except select.error:
-            e = sys.exc_info[1]
-            if e.args[0] == errno.EINTR:
-                continue
-            raise
+        input_offset = 0
+        while fd2file:
+            try:
+                ready = poller.poll()
+            except select.error:
+                e = sys.exc_info[1]
+                if e.args[0] == errno.EINTR:
+                    continue
+                raise
 
-        for fd, mode in ready:
-            if mode & select.POLLOUT:
-                chunk = input[input_offset : input_offset + _PIPE_BUF]
-                try:
-                    input_offset += os.write(fd, chunk)
-                except OSError as e:
-                    if e.errno == errno.EPIPE:
-                        close_unregister_and_remove(fd)
+            for fd, mode in ready:
+                if mode & select.POLLOUT:
+                    chunk = input[input_offset : input_offset + subprocess._PIPE_BUF]
+                    try:
+                        input_offset += os.write(fd, chunk)
+                    except OSError as e:
+                        if e.errno == errno.EPIPE:
+                            close_unregister_and_remove(fd)
+                        else:
+                            raise
                     else:
-                        raise
-                else:
-                    if input_offset >= len(input):
+                        if input_offset >= len(input):
+                            close_unregister_and_remove(fd)
+                elif mode & select_POLLIN_POLLPRI:
+                    data = os.read(fd, 4096)
+                    if self.output_callback:
+                        self.output_callback[0](self.shell, self, fd, data, *self.output_callback[1:])
+                    if not data:
                         close_unregister_and_remove(fd)
-            elif mode & select_POLLIN_POLLPRI:
-                data = os.read(fd, 4096)
-                if self.output_callback:
-                    self.output_callback(self, fd, data, *self.output_callback_args, **self.output_callback_kwargs)
-                if not data:
+                    fd2output[fd].append(data)
+                else:
+                    # Ignore hang up or errors.
                     close_unregister_and_remove(fd)
-                fd2output[fd].append(data)
-            else:
-                # Ignore hang up or errors.
-                close_unregister_and_remove(fd)
 
-    return (stdout, stderr)
-subprocess.Popen._communicate_with_poll = _communicate_with_poll
+        return (stdout, stderr)
 
 # Testing is good. Must test.
 if __name__ == '__main__':
@@ -290,6 +320,7 @@ if __name__ == '__main__':
         def test_notfound(self):
             # Non-existing command
             self.assertRaises(AttributeError, lambda: shell.cd)
+            self.assertRaises(KeyError, lambda: shell['/not/found'])
 
         def test_basic(self):
             # Basic command test
@@ -297,6 +328,17 @@ if __name__ == '__main__':
             self.assertEqual(r.returncode, 0)
             self.assertEqual(r.stderr, b(''))
             self.assertTrue(r.stdout != (''))
+
+            v = '.'.join([str(x) for x in sys.version_info[:3]])
+            r = shell[sys.executable]('-V')
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(r.stdout, b(''))
+            self.assertTrue(b(v) in r.stderr)
+
+            r = shell[os.path.basename(sys.executable)]('-V')
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(r.stdout, b(''))
+            self.assertTrue(b(v) in r.stderr)
 
         def test_underscores(self):
             # Underscore-replacement
@@ -428,16 +470,26 @@ if __name__ == '__main__':
         def test_callback(self):
             chunks = []
             seen_eof = {}
-            def cb(sp, fd, data, *args, **kwargs):
+            def cb(shell, sp, fd, data, arg):
+                self.assertEqual(arg, 'hello')
                 if data is None:
                     seen_eof[fd] = True
                     return
                 chunks.append(data)
-            r = shell.dmesg(output_callback=cb)
+            r = shell.dmesg(output_callback=[cb, 'hello'])
             self.assertEqual(r.returncode, 0)
             self.assertTrue(len(chunks) > 1)
             self.assertEqual(r.stdout, b('').join(chunks))
             self.assertEqual(list(seen_eof.values()), [True, True])
+
+            cb_called = []
+            def cb(shell, sp, res):
+                self.assertEqual(sp.returncode, 0)
+                cb_called.append(True)
+
+            shell.true(exit_callback=cb)
+            pipe(pipe.true()|pipe.true(exit_callback=cb))
+            self.assertEqual(cb_called, [True, True])
 
         def test_defaults(self):
             s = Shell(stdout = shell.STDOUT)
@@ -445,5 +497,27 @@ if __name__ == '__main__':
             r = s.cat(input=input)
             self.assertEqual(r.returncode, 0)
             self.assertEqual(r.stdout, input)
+
+        def test_raises(self):
+            s = Shell(raise_on_error=True) 
+            self.assertRaises(CommandFailed, s.false)
+
+            try:
+                s.grep('whatever', '/does/not/exist')
+            except:
+                t,v,tb = sys.exc_info()
+                self.assertEqual(CommandFailed, t)
+                self.assertEqual(v.result.returncode, 2)
+            else:
+                self.fail("No exception was raised")
+
+            try:
+                pipe(pipe.dmesg()|pipe.grep("snuffleupagus", raise_on_error=True))
+            except:
+                t,v,tb = sys.exc_info()
+                self.assertEqual(CommandFailed, t)
+                self.assertEqual(v.result.returncode.count(1), 1)
+            else:
+                self.fail("No exception was raised")
 
     unittest.main()

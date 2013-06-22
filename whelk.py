@@ -111,7 +111,9 @@ class Command(object):
 
     def __call__(self, *args, **kwargs):
         """Save arguments, execute a subprocess unless we need to be defered"""
-        self.args = args
+        self.args = args[:]
+        self.kwargs = kwargs.copy()
+
         # When not specified, make sure stdio is coming back to us
         kwargs['close_fds'] = True
         if kwargs.pop('redirect', True):
@@ -135,18 +137,18 @@ class Command(object):
             self.exit_callback = [self.exit_callback]
         self.raise_on_error = kwargs.pop('raise_on_error', self.defaults.get('raise_on_error', False))
 
-        self.kwargs = kwargs
+        self.sp_kwargs = kwargs
         if PY3:
             all_kwargs = Popen.__init__.__code__.co_varnames[2:Popen.__init__.__code__.co_argcount]
         else:
             all_kwargs = Popen.__init__.im_func.func_code.co_varnames[2:Popen.__init__.im_func.func_code.co_argcount]
         for kwarg in all_kwargs:
-            if kwarg in self.defaults and kwarg not in self.kwargs:
-                self.kwargs[kwarg] = self.defaults[kwarg]
+            if kwarg in self.defaults and kwarg not in self.sp_kwargs:
+                self.sp_kwargs[kwarg] = self.defaults[kwarg]
 
         if not self.defer:
             # No need to defer, so call ourselves
-            sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+            sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.sp_kwargs))
             sp.output_callback = self.output_callback
             sp.shell = self
             (out, err) = sp.communicate(self.input)
@@ -184,15 +186,15 @@ class Command(object):
         self.next = other
         other.prev = self
         r, w = os.pipe()
-        self.kwargs['stdout'] = PIPE
-        self.sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        self.sp_kwargs['stdout'] = PIPE
+        self.sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.sp_kwargs))
         self.sp.shell = self
         other.kwargs['stdin'] = self.sp.stdout
         return other
 
     def run_pipe(self):
         """Run the last command in the pipe and collect returncodes"""
-        sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.kwargs))
+        sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.sp_kwargs))
         sp.shell = self
         sp.output_callback = self.output_callback
 

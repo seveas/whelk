@@ -189,7 +189,7 @@ class Command(object):
         self.sp_kwargs['stdout'] = PIPE
         self.sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.sp_kwargs))
         self.sp.shell = self
-        other.kwargs['stdin'] = self.sp.stdout
+        other.sp_kwargs['stdin'] = self.sp.stdout
         return other
 
     def run_pipe(self):

@@ -288,7 +288,8 @@ class Popen(subprocess.Popen):
                     chunk = input[input_offset : input_offset + subprocess._PIPE_BUF]
                     try:
                         input_offset += os.write(fd, chunk)
-                    except OSError as e:
+                    except OSError:
+                        e = sys.last_exc()
                         if e.errno == errno.EPIPE:
                             close_unregister_and_remove(fd)
                         else:

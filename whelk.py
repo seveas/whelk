@@ -116,7 +116,7 @@ class Command(object):
 
         # When not specified, make sure stdio is coming back to us
         kwargs['close_fds'] = True
-        if kwargs.pop('redirect', True):
+        if kwargs.pop('redirect', self.defaults.get('redirect', True)):
             for stream in ('stdin', 'stdout', 'stderr'):
                 if stream not in kwargs:
                     kwargs[stream] = PIPE

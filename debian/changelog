@@ -1,3 +1,9 @@
+whelk (1.9-1) saucy; urgency=low
+
+  * New upstream release
+
+ -- Dennis Kaarsemaker <dennis@kaarsemaker.net>  Fri, 18 Oct 2013 22:56:11 +0200
+
 whelk (1.8-1) quantal; urgency=low
 
   * New upstream release

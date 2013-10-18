@@ -244,6 +244,89 @@ pipe = Pipe()
 
 # Subclass Popen to add output callbacks
 class Popen(subprocess.Popen):
+  if sys.version_info[:2] >= (3,3):
+    def _communicate_with_poll(self, input, endtime, orig_timeout):
+        stdout = None # Return
+        stderr = None # Return
+
+        if not self._communication_started:
+            self._fd2file = {}
+
+        poller = select.poll()
+        def register_and_append(file_obj, eventmask):
+            poller.register(file_obj.fileno(), eventmask)
+            self._fd2file[file_obj.fileno()] = file_obj
+
+        def close_unregister_and_remove(fd):
+            poller.unregister(fd)
+            self._fd2file[fd].close()
+            self._fd2file.pop(fd)
+            if self.output_callback:
+                self.output_callback[0](self.shell, self, fd, None, *self.output_callback[1:])
+
+        if self.stdin and input:
+            register_and_append(self.stdin, select.POLLOUT)
+
+        # Only create this mapping if we haven't already.
+        if not self._communication_started:
+            self._fd2output = {}
+            if self.stdout:
+                self._fd2output[self.stdout.fileno()] = []
+            if self.stderr:
+                self._fd2output[self.stderr.fileno()] = []
+
+        select_POLLIN_POLLPRI = select.POLLIN | select.POLLPRI
+        if self.stdout:
+            register_and_append(self.stdout, select_POLLIN_POLLPRI)
+            stdout = self._fd2output[self.stdout.fileno()]
+        if self.stderr:
+            register_and_append(self.stderr, select_POLLIN_POLLPRI)
+            stderr = self._fd2output[self.stderr.fileno()]
+
+        self._save_input(input)
+
+        while self._fd2file:
+            timeout = self._remaining_time(endtime)
+            if timeout is not None and timeout < 0:
+                raise TimeoutExpired(self.args, orig_timeout)
+            try:
+                ready = poller.poll(timeout)
+            except select.error as e:
+                if e.args[0] == errno.EINTR:
+                    continue
+                raise
+            self._check_timeout(endtime, orig_timeout)
+
+            # XXX Rewrite these to use non-blocking I/O on the
+            # file objects; they are no longer using C stdio!
+
+            for fd, mode in ready:
+                if mode & select.POLLOUT:
+                    chunk = self._input[self._input_offset :
+                                        self._input_offset + subprocess._PIPE_BUF]
+                    try:
+                        self._input_offset += os.write(fd, chunk)
+                    except OSError as e:
+                        if e.errno == errno.EPIPE:
+                            close_unregister_and_remove(fd)
+                        else:
+                            raise
+                    else:
+                        if self._input_offset >= len(self._input):
+                            close_unregister_and_remove(fd)
+                elif mode & select_POLLIN_POLLPRI:
+                    data = os.read(fd, 4096)
+                    if self.output_callback:
+                        self.output_callback[0](self.shell, self, fd, data, *self.output_callback[1:])
+                    if not data:
+                        close_unregister_and_remove(fd)
+                    self._fd2output[fd].append(data)
+                else:
+                    # Ignore hang up or errors.
+                    close_unregister_and_remove(fd)
+
+        return (stdout, stderr)
+  else:
     def _communicate_with_poll(self, input):
         stdout = None # Return
         stderr = None # Return

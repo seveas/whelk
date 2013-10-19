@@ -1,3 +1,2 @@
-include README.rst
-include conf.py
-include Makefile
+include README
+include docs/*

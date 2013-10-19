@@ -21,16 +21,16 @@ Installing the latest released version is as simple as::
 
   pip install whelk
 
-This downloads it from PyPI and installs it for you. Alternatively, you can
-download the tarball manually from
-http://pypi.python.org/packages/source/w/whelk/, extract it and run::
-
-  python setup.py install
-
 If you want to tinker with the source, you can install the latest source from
 github::
 
   git clone https://github.com/seveas/whelk.git
+
+And finally, Ubuntu users can install whelk from my ppa::
+
+  sudo apt-add-repository ppa:dennis/python
+  sudo apt-get update
+  sudo apt-get install python-whelk python3-whelk
 
 Calling a command
 -----------------

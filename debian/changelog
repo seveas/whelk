@@ -1,3 +1,9 @@
+whelk (1.10-2) saucy; urgency=low
+
+  * Correct docs install
+
+ -- Dennis Kaarsemaker <dennis@kaarsemaker.net>  Sat, 19 Oct 2013 12:33:03 +0200
+
 whelk (1.10-1) saucy; urgency=low
 
   * New upstream release

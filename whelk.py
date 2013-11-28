@@ -135,6 +135,9 @@ class Command(object):
         self.exit_callback = kwargs.pop('exit_callback', self.defaults.get('exit_callback', None))
         if callable(self.exit_callback):
             self.exit_callback = [self.exit_callback]
+        self.run_callback = kwargs.pop('run_callback', self.defaults.get('run_callback', None))
+        if callable(self.run_callback):
+            self.run_callback = [self.run_callback]
         self.raise_on_error = kwargs.pop('raise_on_error', self.defaults.get('raise_on_error', False))
 
         self.sp_kwargs = kwargs
@@ -148,6 +151,8 @@ class Command(object):
 
         if not self.defer:
             # No need to defer, so call ourselves
+            if self.run_callback:
+                self.run_callback[0](self, *self.run_callback[1:])
             sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.sp_kwargs))
             sp.output_callback = self.output_callback
             sp.shell = self
@@ -187,6 +192,8 @@ class Command(object):
         other.prev = self
         r, w = os.pipe()
         self.sp_kwargs['stdout'] = PIPE
+        if self.run_callback:
+            self.run_callback[0](self, *self.run_callback[1:])
         self.sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.sp_kwargs))
         self.sp.shell = self
         other.sp_kwargs['stdin'] = self.sp.stdout
@@ -194,6 +201,8 @@ class Command(object):
 
     def run_pipe(self):
         """Run the last command in the pipe and collect returncodes"""
+        if self.run_callback:
+            self.run_callback[0](self, *self.run_callback[1:])
         sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.sp_kwargs))
         sp.shell = self
         sp.output_callback = self.output_callback
@@ -569,13 +578,17 @@ if __name__ == '__main__':
             self.assertEqual(list(seen_eof.values()), [True, True])
 
             cb_called = []
-            def cb(shell, sp, res):
+            def cb1(command, sp, res):
                 self.assertEqual(sp.returncode, 0)
-                cb_called.append(True)
+                cb_called.append(1)
+            def cb2(command):
+                cb_called.append(2)
 
-            shell.true(exit_callback=cb)
-            pipe(pipe.true()|pipe.true(exit_callback=cb))
-            self.assertEqual(cb_called, [True, True])
+            s = Shell(exit_callback=cb1, run_callback=cb2)
+            p = Pipe(exit_callback=cb1, run_callback=cb2)
+            s.true()
+            p(p.true(run_callback=None)|p.true(exit_callback=None))
+            self.assertEqual(cb_called, [2,1,2])
 
         def test_defaults(self):
             s = Shell(stdout = shell.STDOUT)

@@ -102,13 +102,18 @@ more keyword arguments:
   If you want slightly more fine-grained control than :data:`raise_on_error`,
   you can use this argument to specify a callable to call whenever a process
   exits, irrespective of the returncode. The callback will be called with as
-  arguments the shell instance, the subprocess, the result tuple and any
+  arguments the command instance, the subprocess, the result tuple and any
   user-provided arguments.
 
-  Both :data:`raise_on_exit` and :data:`exit_callback` are ost useful when set
+  Both :data:`raise_on_exit` and :data:`exit_callback` are most useful when set
   as a default of a :class:`Shell` instance, they are not really needed when
   calling single commands.
 
+* :data:`run_callback`
+
+  A function that will be called whenever the shell instance is about to create
+  a new process. The callback will be called with as arguments  the command
+  instance and any user-provided arguments.
 
 Piping commands together
 ------------------------

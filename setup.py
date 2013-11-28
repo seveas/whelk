@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name = "whelk",
-      version = "1.10",
+      version = "1.11",
       author = "Dennis Kaarsemaker",
       author_email = "dennis@kaarsemaker.net",
       url = "http://github.com/seveas/whelk",

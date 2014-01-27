@@ -370,7 +370,7 @@ class Popen(subprocess.Popen):
             try:
                 ready = poller.poll()
             except select.error:
-                e = sys.exc_info[1]
+                e = sys.exc_info()[1]
                 if e.args[0] == errno.EINTR:
                     continue
                 raise

@@ -12,7 +12,7 @@ setup(name = "whelk",
       classifiers = [
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'License :: OSI Approved :: zlib/libpng License',
         'Programming Language :: Python',
         'Operating System :: POSIX',
         'Topic :: Software Development :: Libraries :: Python Modules',

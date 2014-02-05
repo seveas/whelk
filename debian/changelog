@@ -1,3 +1,9 @@
+whelk (2.1-1) saucy; urgency=low
+
+  * New upstream version
+
+ -- Dennis Kaarsemaker <dennis@kaarsemaker.net>  Wed, 05 Feb 2014 22:39:03 +0100
+
 whelk (2.0-1) saucy; urgency=low
 
   * New upstream version

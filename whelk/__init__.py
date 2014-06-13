@@ -88,9 +88,15 @@ class Shell(object):
         if try_path and '/' in name and os.access(name, os.X_OK):
             return Command(name,defer=defer,defaults=self.defaults)
         name_ = name.replace('_','-')
-        for d in os.environ['PATH'].split(':'):
+        for d in os.environ['PATH'].split(os.pathsep):
+            if d.endswith('"') and d.startswith('"'):
+                d=d[1:-1]
+	    if sys.platform == 'win32' and not name.endswith('.exe'):
+                p = os.path.join(d, name) + '.exe'
+                if os.path.isfile(p) and os.access(p, os.X_OK):
+                    return Command(p,defer=defer,defaults=self.defaults)
             p = os.path.join(d, name)
-            if os.access(p, os.X_OK):
+            if os.path.isfile(p) and os.access(p, os.X_OK):
                 return Command(p,defer=defer,defaults=self.defaults)
             # Try a translation from _ to - as python identifiers can't
             # contain -
@@ -117,7 +123,6 @@ class Pipe(Shell):
 class Command(object):
     """A subprocess wrapper that executes the program when called or when
        combined with the or operator for pipes"""
-
     def __init__(self, name=None, defer=False, defaults={}):
         self.name = str(name)
         self.defer = defer

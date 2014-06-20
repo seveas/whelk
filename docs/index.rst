@@ -59,6 +59,10 @@ stdout, stderr)`::
 
     result = shell['./Configure']('-des', '-Dusedevel')
 
+These result objects can also be used as booleans. As in shellscript, a
+non-zero returncode is consifered :data:`False` and a returncode of zero is
+considered :data:`True`.
+
 In addition to the :class:`subprocess.Popen` arguments, whelk supports a few
 more keyword arguments:
 

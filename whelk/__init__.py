@@ -31,20 +31,20 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-try:
-    from collections import namedtuple
-    Result = namedtuple('Result', ('returncode','stdout','stderr'))
-except ImportError:
-    # namedtuple only exists in 2.6+
-    class Result(tuple):
-        __slots__ = ()
-        def __new__(cls, returncode, stdout, stderr):
-            return tuple.__new__(cls, (returncode, stdout, stderr))
-        def __repr__(self):
-            return 'Result' + super(Result, self).__repr__()
-        returncode = property(lambda self: self[0])
-        stdout = property(lambda self: self[1])
-        stderr = property(lambda self: self[2])
+class Result(tuple):
+    __slots__ = ()
+    def __new__(cls, returncode, stdout, stderr):
+        return tuple.__new__(cls, (returncode, stdout, stderr))
+    def __repr__(self):
+        return 'Result' + super(Result, self).__repr__()
+    returncode = property(lambda self: self[0])
+    stdout = property(lambda self: self[1])
+    stderr = property(lambda self: self[2])
+    def __nonzero__(self):
+        if isinstance(self.returncode, int):
+            return self.returncode == 0
+        return self.returncode.count(0) == len(self.returncode)
+
 import os
 import whelk._subprocess as subprocess
 import sys

@@ -48,20 +48,35 @@ dict also accepts full paths to commands, even if they are not on your
 Attributes of the :class:`shell` instance are all callables. Arguments to this
 callable get mapped to arguments to the command via a :class:`subprocess.Popen`
 object. Keyword arguments get mapped to keyword arguments for the
-:class:`Popen` object.  Shell commands return a namedtuple :data:`(returncode,
-stdout, stderr)`::
+:class:`Popen` object::
 
     result = shell.netstat('-tlpn')
-
     result = shell.git('status', cwd='/home/dennis/code/whelk')
-
     result = shell['2to3']('awesome.py')
-
     result = shell['./Configure']('-des', '-Dusedevel')
 
-These result objects can also be used as booleans. As in shellscript, a
-non-zero returncode is consifered :data:`False` and a returncode of zero is
-considered :data:`True`.
+Oh, and on windows you can leave out the :data:`.exe` suffix, like you would on
+the command line as well::
+
+    result = shell.nmake('test')
+
+Shell commands return a namedtuple :data:`(returncode, stdout, stderr)` These
+result objects can also be used as booleans. As in shellscript, a non-zero
+returncode is consifered :data:`False` and a returncode of zero is considered
+:data:`True`, so this simply works::
+
+    result = shell.make('test'):
+    if not result:
+        print("You broke the build!")
+        print(result.stderr)
+
+The result of :data:`pipe(...)` is slightly different: instead of a single return
+code, it actually will give you a list of returncodes of all items in the
+pipeline. Result objects like this are only considered :data:`True` if all
+elements are zero.
+
+Keyword arguments
+-----------------
 
 In addition to the :class:`subprocess.Popen` arguments, whelk supports a few
 more keyword arguments:
@@ -101,6 +116,11 @@ more keyword arguments:
   a :class:`CommandFailed` exception is raised whenever a command returns with
   a nonzero exitcode.
 
+  The reason this is not the default, is that for quite a few commands a
+  non-zero exitcode, does not indicate an error at all. For example, the
+  venerable :data:`diff` command returns 1 if there is a change and 0 if there
+  is none.
+
 * :data:`exit_callback`
 
   If you want slightly more fine-grained control than :data:`raise_on_error`,
@@ -113,11 +133,46 @@ more keyword arguments:
   as a default of a :class:`Shell` instance, they are not really needed when
   calling single commands.
 
+  Here's a real life example of an exit callback, which will retry git
+  operations when the break due to repository locks::
+
+    def check_sp(command, sp, res):
+        if not res:
+            if 'index.lock' in res.stderr:
+                # Let's retry
+                time.sleep(random.random())
+                return command(*command.args, **command.kwargs)
+            raise RuntimeError("%s %s failed: %s" % (command.name, ' '.join(command.args), res.stderr))
+
+    git = Shell(exit_callback=check_lock).git
+    git.checkout('master')
+
 * :data:`run_callback`
 
   A function that will be called whenever the shell instance is about to create
   a new process. The callback will be called with as arguments  the command
-  instance and any user-provided arguments.
+  instance and any user-provided arguments. Here's an example that logs all
+  starts of applications::
+
+    def runlogger(cmd):
+        args = [cmd.name] + list(cmd.args)
+        env = cmd.sp_kwargs.get('env', '')
+        if env:
+            env = ['%s=%s' % (x, env[x]) for x in env if env[x] != os.environ.get(x, None)]
+            env = '%s ' % ' '.join(env)
+        logger.debug("Running %s%s" % (env, ' '.join(args)))
+
+    shell = Shell(run_callback=runlogger)
+
+* :data:`encoding`
+
+  On python 3, subprocesses require :class:`bytes` objects as input and will
+  return :class:`bytes` objects as output. You can specify an encoding for a
+  command to make whelk do the encoding/decoding for you::
+
+    kernel_says = shell.dmesg('-t', encoding='latin-1')
+
+  On python 2, this keyword is ignored ans whelk will leave your data alone.
 
 Piping commands together
 ------------------------
@@ -154,7 +209,7 @@ calls::
    from whelk import Shell
    my_env = os.environ.copy()
    my_env['http_proxy'] = 'http://webproxy.corp:3128'
-   shell = Shell(stderr=Shell.STDOUT, env=my_env)
+   shell = Shell(stderr=Shell.STDOUT, env=my_env, encoding='utf8')
 
    shell.wget("http://google.com", "-o", "google.html")
 
@@ -162,15 +217,3 @@ Python compatibility
 --------------------
 Whelk is compatible with python 2.4 and up, including python 3. If you find an
 incompatibility, please report a bug at https://github.com/seveas/whelk.
-
-Note that on python 3, subprocesses require :class:`bytes` objects as input and
-will return :class:`bytes` objects as output. You can specify an encoding for a
-command to make whelk do the encoding/decoding for you::
-
-  kernel_says = shell.dmesg('-t', encoding='latin-1')
-
-You can also make all commands launched by a Shell instance do this::
-
-  from whelk import Shell
-  shell = Shell(encoding='utf-8')
-  kernel_says = shell.dmesg('-t')

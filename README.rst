@@ -19,16 +19,16 @@ Much more usage info can de found at http://seveas.github.io/whelk/
 Installing
 ----------
 
-Installing the latest released version is as simple as:
+Installing the latest released version is as simple as::
 
   pip install whelk
 
 If you want to tinker with the source, you can install the latest source from
-github:
+github::
 
   git clone https://github.com/seveas/whelk.git
 
-And finally, Ubuntu users can install whelk from my ppa:
+And finally, Ubuntu users can install whelk from my ppa::
 
   sudo apt-add-repository ppa:dennis/python
   sudo apt-get update
@@ -36,6 +36,7 @@ And finally, Ubuntu users can install whelk from my ppa:
 
 License
 -------
+
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
 version 3, as published by the Free Software Foundation.

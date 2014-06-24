@@ -1,0 +1,202 @@
+\documentclass{beamer}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{fontspec}
+\usepackage{soul}
+\usepackage{minted}
+\usepackage{tikz}
+\setsansfont{Latin Modern Roman}
+\setsansfont{Droid Sans}
+
+\setbeamertemplate{navigation symbols}{}
+
+\mode<presentation>
+\title{Pretending python is a shell}
+\author{Dennis Kaarsemaker}
+\date{June 20 2014}
+\begin{document}
+
+{
+\usebackgroundtemplate{
+  \tikz[overlay,remember picture] 
+  \node[opacity=0.3, at=(current page.south east),anchor=south east,inner sep=0pt] {
+        \includegraphics[height=8cm]{whelk.jpg}
+  };
+}
+\begin{frame}
+    \titlepage
+\end{frame}
+}
+
+\begin{frame}[fragile]
+    \frametitle{The bad}
+    \begin{minted}{python}
+import subprocess
+
+sp = subprocess.Popen(['/usr/sbin/dmidecode', '-s', 
+        'system-serial-number'], stdout=subprocess.PIPE, 
+        stderr=subprocess.PIPE, close_fds=True)
+out, err = sp.communicate()
+if sp.returncode != 0:
+    raise EnvironmentError("dmidecode failed: %s" % err)
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{The ugly}
+    \begin{minted}{python}
+read_fd, write_fd = os.pipe()
+sp1 = subprocess.Popen(['git', 'cat-file', 'commit', 
+        sha1, stdout=write_fd)
+sp2 = subprocess.Popen(['git', 'hash-object', '-t', 
+        'commit' '--stdin'], stdin=read_fd)
+sp1.wait()
+sp2.wait()
+if sp.returncode != 0 or sp2.returncode != 0:
+    raise EnvironmentError("Cannot run git")
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{The good}
+    \begin{minted}{python}
+from whelk import shell, pipe
+    \end{minted}
+    \pause
+    \begin{minted}{python}
+serial = shell.dmidecode('-s', 'system-serial-number')\
+    .stdout
+    \end{minted}
+    \pause
+    \begin{minted}{python}
+pipe(
+    pipe.git('cat-file', 'commit', sha1) |
+    pipe.git('hash-object', '-t', 'commit', '--stdin')
+)
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Path searching}
+    \pause
+    \begin{minted}{python}
+        # Dashes, no underscores!
+        shell.xdg_open('example.ppt', cwd='Documents')
+    \end{minted}
+    \pause
+    \begin{minted}{python}
+        # Invalid identifiers
+        shell['2to3']('awesome.py')
+    \end{minted}
+    \pause
+    \begin{minted}{python}
+        # Full paths
+        shell['./configure']('--enable-flux-capacitor')
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{I/O}
+    \begin{minted}{python}
+# Easy redirection
+message = shell.vipe(input=message).stdout
+git.rebase('--interactive', 'master', redirect=False)
+    \end{minted}
+    \pause
+    \begin{minted}{python}
+# Per-line logging
+logfunc = lambda cmd, sp, fd, data: logger.info(data)
+shell.make('test', output_callback=logfunc)
+    \end{minted}
+    \pause
+    \begin{minted}{python}
+# Encodings (python3)
+shell.apt_cache('show', 'deja-dup', encoding='utf8')
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Process hooks}
+    \begin{minted}{python}
+    shell.make('test',
+        output_callback=OutputLogger(self.logger),
+    )
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Process hooks}
+    \begin{minted}{python}
+    shell.make('test',
+        output_callback=OutputLogger(self.logger),
+        run_callback=RunLogger(self.logger),
+    )
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Process hooks}
+    \begin{minted}{python}
+    shell.make('test',
+        output_callback=OutputLogger(self.logger),
+        run_callback=RunLogger(self.logger),
+        exit_callback=check_sp,
+    )
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Process hooks}
+    \begin{minted}{python}
+    shell.make('test',
+        output_callback=OutputLogger(self.logger),
+        run_callback=RunLogger(self.logger),
+        raise_on_error=True,
+    )
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Defaults}
+    \begin{minted}{pycon}
+>>> from whelk import Shell
+>>> shell = Shell(raise_on_error=True)
+>>> shell.false()
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/usr/lib/python2.7/dist-packages/whelk/__init__.py", line 183, in __call__
+    raise CommandFailed(res)
+whelk.CommandFailed
+    \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+    \frametitle{Defaults}
+    \begin{minted}{python}
+from whelk import Shell
+shell = Shell(raise_on_error=True)
+git = shell.git
+git.checkout('next')
+if not git.diff('--quiet', 'master', raise_on_error=False):
+    git.rebase('master', redirect=False)
+    \end{minted}
+\end{frame}
+
+{
+\usebackgroundtemplate{
+  \tikz[overlay,remember picture] 
+  \node[opacity=0.3, at=(current page.south east),anchor=south east,inner sep=0pt] {
+        \includegraphics[height=8cm]{whelk.jpg}
+  };
+}
+\begin{frame}
+    \frametitle{Where to get it}
+    \begin{description}[Documentation]
+    \item[Source] \href{http://github.com/seveas/whelk/}{github.com/seveas/whelk}
+    \item[PyPI] \texttt{pip install whelk}
+    \item[Documentation] \href{http://seveas.github.io/whelk/}{seveas.github.io/whelk}
+    \end{description}
+\end{frame}
+}
+
+\end{document}

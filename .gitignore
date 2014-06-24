@@ -5,6 +5,14 @@ __pycache__
 *.inv
 *.js
 .*
+*.aux
+*.log
+*.nav
+*.out
+*.pdf
+*.snm
+*.toc
+*.vrb
 dist
 build
 MANIFEST

@@ -31,20 +31,20 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-try:
-    from collections import namedtuple
-    Result = namedtuple('Result', ('returncode','stdout','stderr'))
-except ImportError:
-    # namedtuple only exists in 2.6+
-    class Result(tuple):
-        __slots__ = ()
-        def __new__(cls, returncode, stdout, stderr):
-            return tuple.__new__(cls, (returncode, stdout, stderr))
-        def __repr__(self):
-            return 'Result' + super(Result, self).__repr__()
-        returncode = property(lambda self: self[0])
-        stdout = property(lambda self: self[1])
-        stderr = property(lambda self: self[2])
+class Result(tuple):
+    __slots__ = ()
+    def __new__(cls, returncode, stdout, stderr):
+        return tuple.__new__(cls, (returncode, stdout, stderr))
+    def __repr__(self):
+        return 'Result' + super(Result, self).__repr__()
+    returncode = property(lambda self: self[0])
+    stdout = property(lambda self: self[1])
+    stderr = property(lambda self: self[2])
+    def __nonzero__(self):
+        if isinstance(self.returncode, int):
+            return self.returncode == 0
+        return self.returncode.count(0) == len(self.returncode)
+
 import os
 import whelk._subprocess as subprocess
 import sys
@@ -88,9 +88,15 @@ class Shell(object):
         if try_path and '/' in name and os.access(name, os.X_OK):
             return Command(name,defer=defer,defaults=self.defaults)
         name_ = name.replace('_','-')
-        for d in os.environ['PATH'].split(':'):
+        for d in os.environ['PATH'].split(os.pathsep):
+            if d.endswith('"') and d.startswith('"'):
+                d=d[1:-1]
+	    if sys.platform == 'win32' and not name.endswith('.exe'):
+                p = os.path.join(d, name) + '.exe'
+                if os.path.isfile(p) and os.access(p, os.X_OK):
+                    return Command(p,defer=defer,defaults=self.defaults)
             p = os.path.join(d, name)
-            if os.access(p, os.X_OK):
+            if os.path.isfile(p) and os.access(p, os.X_OK):
                 return Command(p,defer=defer,defaults=self.defaults)
             # Try a translation from _ to - as python identifiers can't
             # contain -
@@ -117,7 +123,6 @@ class Pipe(Shell):
 class Command(object):
     """A subprocess wrapper that executes the program when called or when
        combined with the or operator for pipes"""
-
     def __init__(self, name=None, defer=False, defaults={}):
         self.name = str(name)
         self.defer = defer

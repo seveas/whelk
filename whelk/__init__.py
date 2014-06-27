@@ -44,6 +44,7 @@ class Result(tuple):
         if isinstance(self.returncode, int):
             return self.returncode == 0
         return self.returncode.count(0) == len(self.returncode)
+    __bool__ = __nonzero__
 
 import os
 import whelk._subprocess as subprocess
@@ -91,7 +92,7 @@ class Shell(object):
         for d in os.environ['PATH'].split(os.pathsep):
             if d.endswith('"') and d.startswith('"'):
                 d=d[1:-1]
-	    if sys.platform == 'win32' and not name.endswith('.exe'):
+            if sys.platform == 'win32' and not name.endswith('.exe'):
                 p = os.path.join(d, name) + '.exe'
                 if os.path.isfile(p) and os.access(p, os.X_OK):
                     return Command(p,defer=defer,defaults=self.defaults)

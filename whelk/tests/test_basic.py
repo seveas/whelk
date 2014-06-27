@@ -16,14 +16,21 @@ class BasicTest(unittest.TestCase):
 
         v = '.'.join([str(x) for x in sys.version_info[:3]])
         r = shell[sys.executable]('-V')
-        self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout, b(''))
-        self.assertTrue(b(v) in r.stderr)
+        if sys.version_info[:2] >= (3,4):
+            self.assertEqual(r.stderr, b(''))
+            self.assertTrue(b(v) in r.stdout)
+        else:
+            self.assertEqual(r.stdout, b(''))
+            self.assertTrue(b(v) in r.stderr)
 
         r = shell[os.path.basename(sys.executable)]('-V')
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout, b(''))
-        self.assertTrue(b(v) in r.stderr)
+        if sys.version_info[:2] >= (3,4):
+            self.assertEqual(r.stderr, b(''))
+            self.assertTrue(b(v) in r.stdout)
+        else:
+            self.assertEqual(r.stdout, b(''))
+            self.assertTrue(b(v) in r.stderr)
 
         self.assertTrue(shell.true())
         self.assertFalse(shell.false())

@@ -210,7 +210,6 @@ class Command(object):
         # Yes, we can!
         self.next = other
         other.prev = self
-        r, w = os.pipe()
         self.sp_kwargs['stdout'] = PIPE
         if self.run_callback:
             self.run_callback[0](self, *self.run_callback[1:])

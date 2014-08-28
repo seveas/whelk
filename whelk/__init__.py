@@ -135,11 +135,15 @@ class Command(object):
         self.kwargs = kwargs.copy()
 
         # When not specified, make sure stdio is coming back to us
-        kwargs['close_fds'] = True
         if kwargs.pop('redirect', self.defaults.get('redirect', True)):
             for stream in ('stdin', 'stdout', 'stderr'):
                 if stream not in kwargs:
                     kwargs[stream] = PIPE
+
+        # close_fds is not supported under windows when redirecting stdin/out/err
+        if sys.platform != 'win32' or (kwargs['stdin'], kwargs['stdout'], kwargs['stderr']).count(None) == 3:
+            kwargs['close_fds'] = True
+
         self.input = kwargs.pop('input','')
         self.encoding = kwargs.pop('encoding', self.defaults.get('encoding', None))
         # Backwards compatibility

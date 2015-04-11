@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name = "whelk",
-      version = "2.4",
+      version = "2.5",
       author = "Dennis Kaarsemaker",
       author_email = "dennis@kaarsemaker.net",
       url = "http://github.com/seveas/whelk",
@@ -14,6 +14,7 @@ setup(name = "whelk",
         'Intended Audience :: Developers',
         'License :: OSI Approved :: zlib/libpng License',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
         'Operating System :: POSIX',
         'Topic :: Software Development :: Libraries :: Python Modules',
       ]

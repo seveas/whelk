@@ -11,6 +11,7 @@ import os
 import selectors
 import subprocess
 import sys
+import errno
 
 class Popen(subprocess.Popen):
     output_callback_supported = sys.platform != 'mswindows'

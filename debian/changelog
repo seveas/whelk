@@ -1,3 +1,9 @@
+whelk (2.5-1) vivid; urgency=medium
+
+  * New upstream release
+
+ -- Dennis Kaarsemaker <dennis@kaarsemaker.net>  Sat, 11 Apr 2015 22:15:44 +0200
+
 whelk (2.4-1) trusty; urgency=medium
 
   * New upstream release

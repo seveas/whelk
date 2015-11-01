@@ -2,9 +2,9 @@ import cloud_sptheme as csp
 source_suffix = '.rst'
 master_doc = 'index'
 project = u'whelk'
-copyright = u'2010-2014, Dennis Kaarsemaker'
-version = '2.4'
-release = '2.4'
+copyright = u'2010-2015, Dennis Kaarsemaker'
+version = '2.5'
+release = '2.5.1'
 pygments_style = 'sphinx'
 html_theme = 'cloud'
 html_theme_options = {

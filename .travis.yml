@@ -1,0 +1,18 @@
+language: python
+os:
+    - linux
+python:
+      - "2.7"
+      - "3.2"
+      - "3.3"
+      - "3.4"
+      - "3.5"
+      - "nightly"
+      - "pypy"
+      - "pypy3"
+script: python -munittest discover
+branches:
+    only:
+        - master
+notifications:
+    email: false

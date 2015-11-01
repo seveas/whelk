@@ -1,0 +1,7 @@
+#!/bin/sh
+chunk="1234567890abcdef"
+for i in $(seq 5); do chunk="$chunk$chunk"; done
+# chunk is now 1MB in size
+for i in $(seq $1); do
+    echo -n $chunk
+done

@@ -10,7 +10,7 @@ class CallbackTest(unittest.TestCase):
                 seen_eof[fd] = True
                 return
             chunks.append(data)
-        r = shell.dmesg(output_callback=[cb, 'hello'])
+        r = shell.test_data(16, output_callback=[cb, 'hello'])
         self.assertEqual(r.returncode, 0)
         self.assertTrue(len(chunks) > 1)
         self.assertEqual(r.stdout, b('').join(chunks))
@@ -45,11 +45,11 @@ class CallbackTest(unittest.TestCase):
         self.assertEqual(cb_called, ['run', 'exit'])
 
     def test_raises(self):
-        s = Shell(raise_on_error=True) 
+        s = Shell(raise_on_error=True)
         self.assertRaises(CommandFailed, s.false)
 
         try:
-            s.grep('whatever', '/does/not/exist')
+            s.test_return(2)
         except:
             t,v,tb = sys.exc_info()
             self.assertEqual(CommandFailed, t)
@@ -58,10 +58,11 @@ class CallbackTest(unittest.TestCase):
             self.fail("No exception was raised")
 
         try:
-            pipe(pipe.dmesg()|pipe.grep("snuffleupagus", raise_on_error=True))
+            pipe(pipe.true()|pipe.true()|pipe.test_return(1, raise_on_error=True))
         except:
             t,v,tb = sys.exc_info()
             self.assertEqual(CommandFailed, t)
+            self.assertEqual(v.result.returncode.count(0), 2)
             self.assertEqual(v.result.returncode.count(1), 1)
         else:
             self.fail("No exception was raised")

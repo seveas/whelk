@@ -4,9 +4,9 @@ class PipeTest(unittest.TestCase):
     """Tests pipe functionality"""
     def test_pipes(self):
         # Test basic pipe usage
-        r = pipe(pipe.ls('/') | pipe.grep('-v', 'bin') | pipe.rot13() | pipe.rot13())
-        self.assertEqual(r.returncode, [0,0,0,0])
-        self.assertTrue(b('bin') not in r.stdout)
+        r = pipe(pipe.test_return(0)|pipe.test_return(0, "output")|pipe.grep("o"))
+        self.assertEqual(r.returncode, [0,0,0])
+        self.assertEqual(r.stdout, b('output\n'))
         self.assertEqual(r.stderr, b(''))
 
     def test_pipe_madness(self):
@@ -19,39 +19,36 @@ class PipeTest(unittest.TestCase):
 
     def test_pipe_oneprocess(self):
         # Name says all
-        r = pipe(pipe.ls('/'))
+        r = pipe(pipe.test_return(0, 'output'))
         self.assertEqual(r.returncode, [0])
         self.assertEqual(r.stderr, b(''))
-        self.assertTrue(r.stdout != b(''))
+        self.assertEqual(r.stdout, b('output\n'))
 
     def test_pipe_stderr(self):
         # Stderr redirection in the middle of the pipe
-        r = pipe(pipe.echo("Hello, world!") | pipe.grep("--this-will-not-work", stderr=STDOUT) | pipe.cat())
-        self.assertEqual(r.returncode[0], 0)
-        self.assertTrue(r.returncode[1] > 1)
-        self.assertEqual(r.returncode[2], 0)
-        self.assertTrue(b('this-will-not-work') in r.stdout)
+        r = pipe(pipe.test_return(0) | pipe.test_return(1, "", "error", stderr=STDOUT) | pipe.cat())
+        self.assertEqual(r.returncode, [0,1,0])
+        self.assertEqual(r.stdout, b('error\n'))
         self.assertEqual(r.stderr, b(''))
 
     def test_pipewithinput(self):
         input = b("Hello, world!")
         r = pipe(
-            pipe.caesar(10, input=input) |
-            pipe.caesar(10) |
-            pipe.caesar(6)
+            pipe.tr('a-zA-Z', 'k-za-jK-ZA-J', input=input) |
+            pipe.tr('a-zA-Z', 'k-za-jK-ZA-J') |
+            pipe.tr('a-zA-Z', 'g-za-fG-ZA-F')
         )
         self.assertEqual(r.returncode, [0,0,0])
         self.assertEqual(r.stdout, input)
         self.assertEqual(r.stderr, b(''))
 
     def test_pipewithhugeinput(self):
-        input = b("123456789ABCDEF") * 1024
+        input = b("123456789ABCDEF") * 65536 * 16 # 16 MB
         r = pipe(
-            pipe.caesar(10, input=input) |
-            pipe.caesar(10) |
-            pipe.caesar(6)
+            pipe.tr('a-zA-Z', 'k-za-jK-ZA-J', input=input) |
+            pipe.tr('a-zA-Z', 'k-za-jK-ZA-J') |
+            pipe.tr('a-zA-Z', 'g-za-fG-ZA-F')
         )
         self.assertEqual(r.returncode, [0,0,0])
         self.assertEqual(r.stdout, input)
         self.assertEqual(r.stderr, b(''))
-

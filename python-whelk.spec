@@ -6,7 +6,7 @@
 
 %global srcname distribute
 Name:           python-whelk
-Version:        2.5.1
+Version:        2.7
 Release:        1%{?dist}
 Summary:        Pretending python is a shell
 

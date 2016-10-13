@@ -106,7 +106,7 @@ class Popen(subprocess.Popen):
                 raise
 
             if self.stdin in wlist:
-                chunk = input[input_offset : input_offset + _PIPE_BUF]
+                chunk = input[input_offset : input_offset + subprocess._PIPE_BUF]
                 try:
                     bytes_written = os.write(self.stdin.fileno(), chunk)
                 except OSError as e:

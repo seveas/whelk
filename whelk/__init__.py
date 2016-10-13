@@ -139,7 +139,7 @@ class Command(object):
                     kwargs[stream] = PIPE
 
         # close_fds is not supported under windows when redirecting stdin/out/err
-        if sys.platform != 'win32' or (kwargs['stdin'], kwargs['stdout'], kwargs['stderr']).count(None) == 3:
+        if sys.platform != 'win32' or (kwargs.get('stdin'), kwargs.get('stdout', None), kwargs.get('stderr', None)).count(None) == 3:
             kwargs['close_fds'] = True
 
         self.input = kwargs.pop('input','')

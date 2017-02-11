@@ -107,9 +107,9 @@ class Shell(object):
             raise KeyError("Command '%s' not found" % name)
 
 class Pipe(Shell):
-    """Shell subclass that returns defered commands"""
+    """Shell subclass that returns deferred commands"""
     def __getattr__(self, name):
-        """Return defered commands"""
+        """Return deferred commands"""
         return self._getattr(name, defer=True)
 
     def __getitem__(self, name):
@@ -128,7 +128,7 @@ class Command(object):
         self.defaults = defaults
 
     def __call__(self, *args, **kwargs):
-        """Save arguments, execute a subprocess unless we need to be defered"""
+        """Save arguments, execute a subprocess unless we need to be deferred"""
         self.args = args[:]
         self.kwargs = kwargs.copy()
 

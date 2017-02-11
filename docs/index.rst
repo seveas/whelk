@@ -62,7 +62,7 @@ the command line as well::
 
 Shell commands return a namedtuple :data:`(returncode, stdout, stderr)` These
 result objects can also be used as booleans. As in shellscript, a non-zero
-returncode is consifered :data:`False` and a returncode of zero is considered
+returncode is considered :data:`False` and a returncode of zero is considered
 :data:`True`, so this simply works::
 
     result = shell.make('test'):

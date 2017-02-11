@@ -14,7 +14,7 @@ You can even pipe commands together::
   from whelk import pipe
   pipe(pipe.getent("group") | pipe.grep(":1...:"))
 
-Much more usage info can de found at http://seveas.github.io/whelk/
+Much more usage info can be found at http://seveas.github.io/whelk/
 
 Installing
 ----------

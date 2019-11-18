@@ -143,3 +143,10 @@ class Popen(subprocess.Popen):
                                                       self.stderr.encoding)
 
             return (stdout, stderr)
+
+    def _check_timeout(self, endtime, orig_timeout):
+        """Convenience for checking if a timeout has expired."""
+        if endtime is None:
+            return
+        if _time() > endtime:
+            raise TimeoutExpired(self.args, orig_timeout)

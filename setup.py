@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(name = "whelk",
-      version = "2.7.1",
+      version = "2.8.2",
       author = "Dennis Kaarsemaker",
       author_email = "dennis@kaarsemaker.net",
       url = "http://github.com/seveas/whelk",

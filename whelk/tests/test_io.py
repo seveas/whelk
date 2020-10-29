@@ -5,16 +5,16 @@ class IoTest(unittest.TestCase):
         # Command with stderr
         r = shell.test_return(1, '', 'error')
         self.assertTrue(r.returncode != 0)
-        self.assertEqual(r.stdout, b(''))
-        self.assertEqual(r.stderr, b('error\n'))
+        self.assertEqual(r.stdout, b'')
+        self.assertEqual(r.stderr, b'error\n')
 
     def test_withinput(self):
         # with inputstring
-        inp = b('Hello, world!')
+        inp = b'Hello, world!'
         r = shell.cat(input=inp)
         self.assertEqual(r.returncode, 0)
         self.assertEqual(inp, r.stdout)
-        self.assertEqual(b(''), r.stderr)
+        self.assertEqual(b'', r.stderr)
 
     def test_withio(self):
         # Use open filehandles
@@ -24,13 +24,10 @@ class IoTest(unittest.TestCase):
         r = shell.tr('a-zA-Z', 'n-za-mN-ZA-M', stdin=fd)
         fd.close()
         self.assertEqual(r.returncode, 0)
-        if PY3:
-            rot13 = bytes.maketrans(b('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'),
-                                    b('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM'))
-            self.assertEqual(data.translate(rot13), r.stdout)
-        else:
-            self.assertEqual(data.encode('rot13'), r.stdout)
-        self.assertEqual(r.stderr, b(''))
+        rot13 = bytes.maketrans(b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                                b'nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM')
+        self.assertEqual(data.translate(rot13), r.stdout)
+        self.assertEqual(r.stderr, b'')
 
     def test_withoutredirect(self):
         # Run something with redirect=False
@@ -52,12 +49,9 @@ class IoTest(unittest.TestCase):
 
         r = shell.tr('a-zA-Z', 'n-za-mN-ZA-M', input=input, encoding='utf-8')
         self.assertEqual(r.returncode, 0)
-        if PY3:
-            rot13 = str.maketrans('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-                                     'nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM')
-            self.assertEqual(input.translate(rot13), r.stdout)
-        else:
-            self.assertEqual(input.encode('rot13'), r.stdout)
+        rot13 = str.maketrans('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                              'nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM')
+        self.assertEqual(input.translate(rot13), r.stdout)
         self.assertEqual(r.stderr, '')
 
     def test_encoding2(self):

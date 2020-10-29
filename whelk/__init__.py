@@ -55,7 +55,6 @@ __all__ = ['Shell', 'Pipe', 'shell', 'pipe', 'PIPE', 'STDOUT', 'DEVNULL', 'Comma
 PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
 DEVNULL = subprocess.DEVNULL
-PY3 = sys.version_info[0] == 3
 
 class Shell(object):
     """The magic shell class that finds executables on your $PATH"""
@@ -148,7 +147,7 @@ class Command(object):
         self.encoding = kwargs.pop('encoding', self.defaults.get('encoding', None))
         # Backwards compatibility
         self.encoding = kwargs.pop('charset', self.encoding)
-        if PY3 and hasattr(self.input, 'encode') and self.encoding:
+        if hasattr(self.input, 'encode') and self.encoding:
             self.input = self.input.encode(self.encoding)
         self.defer = kwargs.pop('defer', self.defer)
         self.output_callback = kwargs.pop('output_callback', self.defaults.get('output_callback', None))
@@ -172,10 +171,7 @@ class Command(object):
                 kwargs['stderr'] = stderr_reader.writefd
 
         self.sp_kwargs = kwargs
-        if PY3:
-            all_kwargs = Popen.__init__.__code__.co_varnames[2:Popen.__init__.__code__.co_argcount]
-        else:
-            all_kwargs = Popen.__init__.im_func.func_code.co_varnames[2:Popen.__init__.im_func.func_code.co_argcount]
+        all_kwargs = Popen.__init__.__code__.co_varnames[2:Popen.__init__.__code__.co_argcount]
         for kwarg in all_kwargs:
             if kwarg in self.defaults and kwarg not in self.sp_kwargs:
                 self.sp_kwargs[kwarg] = self.defaults[kwarg]
@@ -196,7 +192,7 @@ class Command(object):
             if stderr_reader:
                 stderr_reader.thread.join()
                 err = stderr_reader.output
-            if PY3 and self.encoding:
+            if self.encoding:
                 if hasattr(out, 'decode'):
                     out = out.decode(self.encoding)
                 if hasattr(err, 'decode'):
@@ -261,7 +257,7 @@ class Command(object):
             proc = proc.prev
 
         (out, err) = sp.communicate(input)
-        if PY3 and self.encoding:
+        if self.encoding:
             out = out.decode(self.encoding)
             err = err.decode(self.encoding)
 

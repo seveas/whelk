@@ -13,7 +13,7 @@ class CallbackTest(unittest.TestCase):
         r = shell.test_data(16, output_callback=[cb, 'hello'])
         self.assertEqual(r.returncode, 0)
         self.assertTrue(len(chunks) > 1)
-        self.assertEqual(r.stdout, b('').join(chunks))
+        self.assertEqual(r.stdout, b''.join(chunks))
         self.assertEqual(list(seen_eof.values()), [True, True])
 
         cb_called = []
@@ -50,19 +50,15 @@ class CallbackTest(unittest.TestCase):
 
         try:
             s.test_return(2)
-        except:
-            t,v,tb = sys.exc_info()
-            self.assertEqual(CommandFailed, t)
-            self.assertEqual(v.result.returncode, 2)
+        except CommandFailed as e:
+            self.assertEqual(e.result.returncode, 2)
         else:
             self.fail("No exception was raised")
 
         try:
             pipe(pipe.true()|pipe.true()|pipe.test_return(1, raise_on_error=True))
-        except:
-            t,v,tb = sys.exc_info()
-            self.assertEqual(CommandFailed, t)
-            self.assertEqual(v.result.returncode.count(0), 2)
-            self.assertEqual(v.result.returncode.count(1), 1)
+        except CommandFailed as e:
+            self.assertEqual(e.result.returncode.count(0), 2)
+            self.assertEqual(e.result.returncode.count(1), 1)
         else:
             self.fail("No exception was raised")

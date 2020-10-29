@@ -11,13 +11,13 @@ class BasicTest(unittest.TestCase):
         # Basic command test
         r = shell.test_return('0', 'output')
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout, b('output\n'))
-        self.assertEqual(r.stderr, b(''))
+        self.assertEqual(r.stdout, b'output\n')
+        self.assertEqual(r.stderr, b'')
 
         r = shell.test_return('22', 'stdout', 'stderr')
         self.assertEqual(r.returncode, 22)
-        self.assertEqual(r.stdout, b('stdout\n'))
-        self.assertEqual(r.stderr, b('stderr\n'))
+        self.assertEqual(r.stdout, b'stdout\n')
+        self.assertEqual(r.stderr, b'stderr\n')
 
 
     def test_underscores(self):
@@ -26,15 +26,15 @@ class BasicTest(unittest.TestCase):
         self.assertTrue('test-dashes' in c.name)
         r = c(0)
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stderr, b(''))
-        self.assertEqual(r.stdout, b(''))
+        self.assertEqual(r.stderr, b'')
+        self.assertEqual(r.stdout, b'')
 
     def test_exceptions(self):
         self.assertRaises(CommandFailed, lambda: shell.false(raise_on_error=True))
 
     def test_defaults(self):
         s = Shell(stdout = shell.STDOUT)
-        input = b("Testing 1 2 3")
+        input = b"Testing 1 2 3"
         r = s.cat(input=input)
         self.assertEqual(r.returncode, 0)
         self.assertEqual(r.stdout, input)

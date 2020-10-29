@@ -45,14 +45,16 @@ class Result(tuple):
     __bool__ = __nonzero__
 
 import os
-import whelk._subprocess as subprocess
+import subprocess
 import sys
+import threading
 Popen = subprocess.Popen
 
-__all__ = ['Shell', 'Pipe', 'shell', 'pipe', 'PIPE', 'STDOUT', 'CommandFailed']
+__all__ = ['Shell', 'Pipe', 'shell', 'pipe', 'PIPE', 'STDOUT', 'DEVNULL', 'CommandFailed']
 # Mirror some subprocess constants
 PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
+DEVNULL = subprocess.DEVNULL
 PY3 = sys.version_info[0] == 3
 
 class Shell(object):
@@ -152,8 +154,6 @@ class Command(object):
         self.output_callback = kwargs.pop('output_callback', self.defaults.get('output_callback', None))
         if callable(self.output_callback):
             self.output_callback = [self.output_callback]
-        if self.output_callback and not Popen.output_callback_supported:
-            raise EnvironmentError("Output callbacks are not supported on your system")
         self.exit_callback = kwargs.pop('exit_callback', self.defaults.get('exit_callback', None))
         if callable(self.exit_callback):
             self.exit_callback = [self.exit_callback]
@@ -161,6 +161,15 @@ class Command(object):
         if callable(self.run_callback):
             self.run_callback = [self.run_callback]
         self.raise_on_error = kwargs.pop('raise_on_error', self.defaults.get('raise_on_error', False))
+
+        stdout_reader = stderr_reader = None
+        if self.output_callback:
+            if kwargs['stdout'] == PIPE:
+                stdout_reader = ReaderThread(self)
+                kwargs['stdout'] = stdout_reader.writefd
+            if kwargs['stderr'] == PIPE:
+                stderr_reader = ReaderThread(self)
+                kwargs['stderr'] = stderr_reader.writefd
 
         self.sp_kwargs = kwargs
         if PY3:
@@ -176,9 +185,17 @@ class Command(object):
             if self.run_callback:
                 self.run_callback[0](self, *self.run_callback[1:])
             sp = Popen([str(self.name)] + [str(x) for x in self.args], **(self.sp_kwargs))
-            sp.output_callback = self.output_callback
-            sp.shell = self
+            if stdout_reader:
+                stdout_reader.set_process(sp)
+            if stderr_reader:
+                stderr_reader.set_process(sp)
             (out, err) = sp.communicate(self.input)
+            if stdout_reader:
+                stdout_reader.thread.join()
+                out = stdout_reader.output
+            if stderr_reader:
+                stderr_reader.thread.join()
+                err = stderr_reader.output
             if PY3 and self.encoding:
                 if hasattr(out, 'decode'):
                     out = out.decode(self.encoding)
@@ -261,6 +278,34 @@ class Command(object):
         if self.raise_on_error and res.returncode.count(0) != len(res.returncode):
             raise CommandFailed(res)
         return res
+
+class ReaderThread:
+    def __init__(self, shell):
+        self.readfd, self.writefd = os.pipe()
+        self.readfd = os.fdopen(self.readfd, 'rb')
+        self.writefd = os.fdopen(self.writefd, 'wb')
+        self.shell = shell
+        self.callback = shell.output_callback[0]
+        self.args = shell.output_callback[1:]
+        self.process = None
+        self.thread = threading.Thread(target=self.reader)
+        self.output = b''
+        self.thread.start()
+
+    def set_process(self, process):
+        self.process = process
+        self.writefd.close()
+
+    def reader(self):
+        while True:
+            data = self.readfd.read(100)
+            if data == b'':
+                data = None
+            self.callback(self.shell, self.process, self.readfd, data, *self.args)
+            if not data:
+                break
+            self.output += data
+        self.readfd.close()
 
 class CommandFailed(RuntimeError):
     def __init__(self, result):

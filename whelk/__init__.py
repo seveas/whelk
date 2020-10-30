@@ -144,11 +144,11 @@ class Command(object):
             kwargs['close_fds'] = True
 
         self.input = kwargs.pop('input','')
-        self.encoding = kwargs.pop('encoding', self.defaults.get('encoding', None))
+        self.encoding = kwargs.get('encoding', self.defaults.get('encoding', None))
+        self.errors = kwargs.get('errors', self.defaults.get('errors', None))
+        self.text = kwargs.get('text', self.defaults.get('text', None))
         # Backwards compatibility
-        self.encoding = kwargs.pop('charset', self.encoding)
-        if hasattr(self.input, 'encode') and self.encoding:
-            self.input = self.input.encode(self.encoding)
+        self.encoding = kwargs.get('charset', self.encoding)
         self.defer = kwargs.pop('defer', self.defer)
         self.output_callback = kwargs.pop('output_callback', self.defaults.get('output_callback', None))
         if callable(self.output_callback):
@@ -171,7 +171,7 @@ class Command(object):
                 kwargs['stderr'] = stderr_reader.writefd
 
         self.sp_kwargs = kwargs
-        all_kwargs = Popen.__init__.__code__.co_varnames[2:Popen.__init__.__code__.co_argcount]
+        all_kwargs = Popen.__init__.__code__.co_varnames[2:Popen.__init__.__code__.co_argcount] + tuple(Popen.__init__.__kwdefaults__)
         for kwarg in all_kwargs:
             if kwarg in self.defaults and kwarg not in self.sp_kwargs:
                 self.sp_kwargs[kwarg] = self.defaults[kwarg]
@@ -192,11 +192,6 @@ class Command(object):
             if stderr_reader:
                 stderr_reader.thread.join()
                 err = stderr_reader.output
-            if self.encoding:
-                if hasattr(out, 'decode'):
-                    out = out.decode(self.encoding)
-                if hasattr(err, 'decode'):
-                    err = err.decode(self.encoding)
             res = Result(sp.returncode, out, err)
             if self.exit_callback:
                 self.exit_callback[0](self, sp, res, *self.exit_callback[1:])
@@ -257,9 +252,6 @@ class Command(object):
             proc = proc.prev
 
         (out, err) = sp.communicate(input)
-        if self.encoding:
-            out = out.decode(self.encoding)
-            err = err.decode(self.encoding)
 
         sp.stdin = old_stdin
 
@@ -278,8 +270,12 @@ class Command(object):
 class ReaderThread:
     def __init__(self, shell):
         self.readfd, self.writefd = os.pipe()
-        self.readfd = os.fdopen(self.readfd, 'rb')
-        self.writefd = os.fdopen(self.writefd, 'wb')
+        if shell.encoding or shell.text:
+            self.readfd = os.fdopen(self.readfd, 'r', encoding=shell.encoding, errors=shell.errors)
+            self.writefd = os.fdopen(self.writefd, 'w', encoding=shell.encoding, errors=shell.errors)
+        else:
+            self.readfd = os.fdopen(self.readfd, 'rb')
+            self.writefd = os.fdopen(self.writefd, 'wb')
         self.shell = shell
         self.callback = shell.output_callback[0]
         self.args = shell.output_callback[1:]

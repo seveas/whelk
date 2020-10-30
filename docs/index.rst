@@ -26,12 +26,6 @@ github::
 
   git clone https://github.com/seveas/whelk.git
 
-And finally, Ubuntu users can install whelk from my ppa::
-
-  sudo apt-add-repository ppa:dennis/python
-  sudo apt-get update
-  sudo apt-get install python-whelk python3-whelk
-
 Calling a command
 -----------------
 
@@ -164,16 +158,6 @@ more keyword arguments:
 
     shell = Shell(run_callback=runlogger)
 
-* :data:`encoding`
-
-  On python 3, subprocesses require :class:`bytes` objects as input and will
-  return :class:`bytes` objects as output. You can specify an encoding for a
-  command to make whelk do the encoding/decoding for you::
-
-    kernel_says = shell.dmesg('-t', encoding='latin-1')
-
-  On python 2, this keyword is ignored ans whelk will leave your data alone.
-
 Piping commands together
 ------------------------
 
@@ -215,5 +199,6 @@ calls::
 
 Python compatibility
 --------------------
-Whelk is compatible with python 2.4 and up, including python 3. If you find an
-incompatibility, please report a bug at https://github.com/seveas/whelk.
+Whelk is compatible with python 3.4 and up, python 2 is no longer supported. If
+you find an incompatibility, please report a bug at
+https://github.com/seveas/whelk.

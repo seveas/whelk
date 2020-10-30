@@ -1,5 +1,5 @@
 # whelk.py - Pretending python is a shell
-# Copyright (c) 2010-2015 Dennis Kaarsemaker <dennis@kaarsemaker.net>
+# Copyright (c) 2010-2020 Dennis Kaarsemaker <dennis@kaarsemaker.net>
 # All rights reserved.
 # 
 # This software is provided 'as-is', without any express or implied

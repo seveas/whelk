@@ -28,15 +28,9 @@ github::
 
   git clone https://github.com/seveas/whelk.git
 
-And finally, Ubuntu users can install whelk from my ppa::
-
-  sudo apt-add-repository ppa:dennis/python
-  sudo apt-get update
-  sudo apt-get install python-whelk python3-whelk
-
 License
 -------
-Copyright (c) 2010-2015 Dennis Kaarsemaker <dennis@kaarsemaker.net>
+Copyright (c) 2010-2020 Dennis Kaarsemaker <dennis@kaarsemaker.net>
 All rights reserved.
 
 This software is provided 'as-is', without any express or implied

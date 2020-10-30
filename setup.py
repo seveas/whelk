@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name = "whelk",
-      version = "2.8.2",
+      version = "3.0",
       author = "Dennis Kaarsemaker",
       author_email = "dennis@kaarsemaker.net",
       url = "http://github.com/seveas/whelk",

@@ -1,0 +1,402 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Pretending python is a shell &mdash; whelk 3.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home"> whelk
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Pretending python is a shell</a><ul>
+<li><a class="reference internal" href="#installing">Installing</a></li>
+<li><a class="reference internal" href="#calling-a-command">Calling a command</a></li>
+<li><a class="reference internal" href="#keyword-arguments">Keyword arguments</a></li>
+<li><a class="reference internal" href="#piping-commands-together">Piping commands together</a></li>
+<li><a class="reference internal" href="#setting-default-arguments">Setting default arguments</a></li>
+<li><a class="reference internal" href="#python-compatibility">Python compatibility</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">whelk</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Pretending python is a shell</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pretending-python-is-a-shell">
+<h1>Pretending python is a shell<a class="headerlink" href="#pretending-python-is-a-shell" title="Permalink to this headline">¶</a></h1>
+<p>We all like python for scripting, because it’s so much more powerful than a
+shell. But sometimes we really need to call a shell command because it’s so
+much easier than writing yet another library in python or adding a dependency:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">whelk</span> <span class="kn">import</span> <span class="n">shell</span>
+<span class="n">shell</span><span class="o">.</span><span class="n">zgrep</span><span class="p">(</span><span class="s2">&quot;-r&quot;</span><span class="p">,</span> <span class="s2">&quot;downloads&quot;</span><span class="p">,</span> <span class="s2">&quot;/var/log/httpd&quot;</span><span class="p">)</span>
+<span class="c1"># Here goes code to process the log</span>
+</pre></div>
+</div>
+<p>You can even pipe commands together:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">whelk</span> <span class="kn">import</span> <span class="n">pipe</span>
+<span class="n">pipe</span><span class="p">(</span><span class="n">pipe</span><span class="o">.</span><span class="n">getent</span><span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">)</span> <span class="o">|</span> <span class="n">pipe</span><span class="o">.</span><span class="n">grep</span><span class="p">(</span><span class="s2">&quot;:1...:&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="section" id="installing">
+<h2>Installing<a class="headerlink" href="#installing" title="Permalink to this headline">¶</a></h2>
+<p>Installing the latest released version is as simple as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">whelk</span>
+</pre></div>
+</div>
+<p>If you want to tinker with the source, you can install the latest source from
+github:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">seveas</span><span class="o">/</span><span class="n">whelk</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="calling-a-command">
+<h2>Calling a command<a class="headerlink" href="#calling-a-command" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">whelk.shell</span></code> object can be used to call any command on your
+<code class="xref py py-data docutils literal notranslate"><span class="pre">$PATH</span></code> that is also a valid python identifier. Since many commands
+contain a “-“, it will find those even if you spell it with a “_”. So e.g.
+<code class="file docutils literal notranslate"><span class="pre">run-parts</span></code> can be found as <code class="xref py py-func docutils literal notranslate"><span class="pre">shell.run_parts()</span></code>.</p>
+<p>If your command is not valid as a python identifier, even after substituting
+dashes for underscores, you can using the <code class="xref py py-class docutils literal notranslate"><span class="pre">shell</span></code> object as a dict. This
+dict also accepts full paths to commands, even if they are not on your
+<code class="xref py py-data docutils literal notranslate"><span class="pre">$PATH</span></code>.</p>
+<p>Attributes of the <code class="xref py py-class docutils literal notranslate"><span class="pre">shell</span></code> instance are all callables. Arguments to this
+callable get mapped to arguments to the command via a <code class="xref py py-class docutils literal notranslate"><span class="pre">subprocess.Popen</span></code>
+object. Keyword arguments get mapped to keyword arguments for the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Popen</span></code> object:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">shell</span><span class="o">.</span><span class="n">netstat</span><span class="p">(</span><span class="s1">&#39;-tlpn&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">shell</span><span class="o">.</span><span class="n">git</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="s1">&#39;/home/dennis/code/whelk&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">shell</span><span class="p">[</span><span class="s1">&#39;2to3&#39;</span><span class="p">](</span><span class="s1">&#39;awesome.py&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">shell</span><span class="p">[</span><span class="s1">&#39;./Configure&#39;</span><span class="p">](</span><span class="s1">&#39;-des&#39;</span><span class="p">,</span> <span class="s1">&#39;-Dusedevel&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Oh, and on windows you can leave out the <code class="xref py py-data docutils literal notranslate"><span class="pre">exe</span></code> suffix, like you would on
+the command line as well:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">shell</span><span class="o">.</span><span class="n">nmake</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Shell commands return a namedtuple <code class="xref py py-data docutils literal notranslate"><span class="pre">(returncode,</span> <span class="pre">stdout,</span> <span class="pre">stderr)</span></code> These
+result objects can also be used as booleans. As in shellscript, a non-zero
+returncode is considered <code class="xref py py-data docutils literal notranslate"><span class="pre">False</span></code> and a returncode of zero is considered
+<code class="xref py py-data docutils literal notranslate"><span class="pre">True</span></code>, so this simply works:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">shell</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">):</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;You broke the build!&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The result of <code class="xref py py-data docutils literal notranslate"><span class="pre">pipe(...)</span></code> is slightly different: instead of a single return
+code, it actually will give you a list of returncodes of all items in the
+pipeline. Result objects like this are only considered <code class="xref py py-data docutils literal notranslate"><span class="pre">True</span></code> if all
+elements are zero.</p>
+</div>
+<div class="section" id="keyword-arguments">
+<h2>Keyword arguments<a class="headerlink" href="#keyword-arguments" title="Permalink to this headline">¶</a></h2>
+<p>In addition to the <code class="xref py py-class docutils literal notranslate"><span class="pre">subprocess.Popen</span></code> arguments, whelk supports a few
+more keyword arguments:</p>
+<ul>
+<li><p><code class="xref py py-data docutils literal notranslate"><span class="pre">input</span></code></p>
+<p>Contrary to the <code class="xref py py-mod docutils literal notranslate"><span class="pre">subprocess</span></code> defaults, <code class="xref py py-data docutils literal notranslate"><span class="pre">stdin</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">stdout</span></code>
+and <code class="xref py py-data docutils literal notranslate"><span class="pre">stderr</span></code> are set to <code class="xref py py-data docutils literal notranslate"><span class="pre">whelk.PIPE</span></code> by default. Input for the
+command can be passed as the <code class="xref py py-data docutils literal notranslate"><span class="pre">input</span></code> keyword parameter.</p>
+<p>Some examples:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">shell</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Hello world!&quot;</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">shell</span><span class="o">.</span><span class="n">vipe</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Some data I want to edit in an editor&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="xref py py-data docutils literal notranslate"><span class="pre">output_callback</span></code></p>
+<p>To process output as soon as it arrives, specify a callback to use. Whenever
+output arrives, this callback will be called with as arguments the shell
+instance, the subprocess, the filedescriptor the data came in on, the actual
+data (or <code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code> in case of EOF) and any user-specified arguments .
+Here’s an example that uses this feature for logging:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">cb</span><span class="p">(</span><span class="n">shell</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&lt;</span><span class="si">%d</span><span class="s2">:</span><span class="si">%d</span><span class="s2">&gt; File descriptor closed&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">extra</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="n">fd</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&lt;</span><span class="si">%d</span><span class="s2">:</span><span class="si">%d</span><span class="s2">&gt; </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">extra</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
+
+<span class="n">shell</span><span class="o">.</span><span class="n">dmesg</span><span class="p">(</span><span class="n">output_callback</span><span class="o">=</span><span class="n">cb</span><span class="p">)</span>
+<span class="n">shell</span><span class="o">.</span><span class="n">mount</span><span class="p">(</span><span class="n">output_callback</span><span class="o">=</span><span class="p">[</span><span class="n">cb</span><span class="p">,</span> <span class="s2">&quot;Mountpoints: &quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="xref py py-data docutils literal notranslate"><span class="pre">raise_on_error</span></code></p>
+<p>This makes your shell even more pythonic: instead of returning an errorcode,
+a <code class="xref py py-class docutils literal notranslate"><span class="pre">CommandFailed</span></code> exception is raised whenever a command returns with
+a nonzero exitcode.</p>
+<p>The reason this is not the default, is that for quite a few commands a
+non-zero exitcode, does not indicate an error at all. For example, the
+venerable <code class="xref py py-data docutils literal notranslate"><span class="pre">diff</span></code> command returns 1 if there is a change and 0 if there
+is none.</p>
+</li>
+<li><p><code class="xref py py-data docutils literal notranslate"><span class="pre">exit_callback</span></code></p>
+<p>If you want slightly more fine-grained control than <code class="xref py py-data docutils literal notranslate"><span class="pre">raise_on_error</span></code>,
+you can use this argument to specify a callable to call whenever a process
+exits, irrespective of the returncode. The callback will be called with as
+arguments the command instance, the subprocess, the result tuple and any
+user-provided arguments.</p>
+<p>Both <code class="xref py py-data docutils literal notranslate"><span class="pre">raise_on_exit</span></code> and <code class="xref py py-data docutils literal notranslate"><span class="pre">exit_callback</span></code> are most useful when set
+as a default of a <code class="xref py py-class docutils literal notranslate"><span class="pre">Shell</span></code> instance, they are not really needed when
+calling single commands.</p>
+<p>Here’s a real life example of an exit callback, which will retry git
+operations when the break due to repository locks:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">check_sp</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s1">&#39;index.lock&#39;</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">stderr</span><span class="p">:</span>
+            <span class="c1"># Let&#39;s retry</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">())</span>
+            <span class="k">return</span> <span class="n">command</span><span class="p">(</span><span class="o">*</span><span class="n">command</span><span class="o">.</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">command</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> failed: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">command</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="o">.</span><span class="n">args</span><span class="p">),</span> <span class="n">res</span><span class="o">.</span><span class="n">stderr</span><span class="p">))</span>
+
+<span class="n">git</span> <span class="o">=</span> <span class="n">Shell</span><span class="p">(</span><span class="n">exit_callback</span><span class="o">=</span><span class="n">check_lock</span><span class="p">)</span><span class="o">.</span><span class="n">git</span>
+<span class="n">git</span><span class="o">.</span><span class="n">checkout</span><span class="p">(</span><span class="s1">&#39;master&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="xref py py-data docutils literal notranslate"><span class="pre">run_callback</span></code></p>
+<p>A function that will be called whenever the shell instance is about to create
+a new process. The callback will be called with as arguments  the command
+instance and any user-provided arguments. Here’s an example that logs all
+starts of applications:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">runlogger</span><span class="p">(</span><span class="n">cmd</span><span class="p">):</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">cmd</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">sp_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;env&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">env</span><span class="p">:</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">env</span><span class="p">[</span><span class="n">x</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">env</span> <span class="k">if</span> <span class="n">env</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">!=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="kc">None</span><span class="p">)]</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Running </span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="p">)))</span>
+
+<span class="n">shell</span> <span class="o">=</span> <span class="n">Shell</span><span class="p">(</span><span class="n">run_callback</span><span class="o">=</span><span class="n">runlogger</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="piping-commands-together">
+<h2>Piping commands together<a class="headerlink" href="#piping-commands-together" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">whelk.pipe</span></code> object is similar to the <code class="xref py py-class docutils literal notranslate"><span class="pre">shell</span></code> object but has
+a few significant differences:</p>
+<ul class="simple">
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">pipe</span></code> commands can be chained with <code class="xref py py-data docutils literal notranslate"><span class="pre">|</span></code> (binary or), resembling
+a shell pipe. <code class="xref py py-class docutils literal notranslate"><span class="pre">pipe</span></code> takes care of the I/O redirecting.</p></li>
+<li><p>The command is not started immediately, but only when wrapping it in another
+<code class="xref py py-func docutils literal notranslate"><span class="pre">pipe()</span></code> call (yes, the object itself is callable), or chaining it to the
+next.</p></li>
+<li><p>In the result tuple, the returncode is actually a list of returncodes of all
+the processes in the pipe, in the order they are executed in.</p></li>
+<li><p>The only I/O redirection you may want to override is
+<code class="xref py py-data docutils literal notranslate"><span class="pre">stderr=whelk.STDOUT</span></code>, or <code class="xref py py-data docutils literal notranslate"><span class="pre">stderr=open('/dev/null',</span> <span class="pre">'w')</span></code> to
+redirect <code class="xref py py-data docutils literal notranslate"><span class="pre">stderr</span></code> of a process to <code class="xref py py-data docutils literal notranslate"><span class="pre">stdin</span></code> of the next process, or
+<code class="file docutils literal notranslate"><span class="pre">/dev/null</span></code> respectively.</p></li>
+</ul>
+<p>Some examples:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span><span class="n">pipe</span><span class="o">.</span><span class="n">dmesg</span><span class="p">()</span> <span class="o">|</span> <span class="n">pipe</span><span class="o">.</span><span class="n">grep</span><span class="p">(</span><span class="s1">&#39;Bluetooth&#39;</span><span class="p">))</span>
+
+<span class="n">cow</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s1">&#39;/usr/share/cowsay/cows&#39;</span><span class="p">))</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pipe</span><span class="p">(</span><span class="n">pipe</span><span class="o">.</span><span class="n">fortune</span><span class="p">(</span><span class="s2">&quot;-s&quot;</span><span class="p">)</span> <span class="o">|</span> <span class="n">pipe</span><span class="o">.</span><span class="n">cowsay</span><span class="p">(</span><span class="s2">&quot;-n&quot;</span><span class="p">,</span> <span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="n">cow</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="setting-default-arguments">
+<h2>Setting default arguments<a class="headerlink" href="#setting-default-arguments" title="Permalink to this headline">¶</a></h2>
+<p>If you want to launch many commands with the same parameters, you can set
+defaults by passing parameters to the <code class="xref py py-class docutils literal notranslate"><span class="pre">Shell</span></code> constructor. These are
+passed on to all commands launched by that shell, unless overridden in specific
+calls:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">whelk</span> <span class="kn">import</span> <span class="n">Shell</span>
+<span class="n">my_env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">my_env</span><span class="p">[</span><span class="s1">&#39;http_proxy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;http://webproxy.corp:3128&#39;</span>
+<span class="n">shell</span> <span class="o">=</span> <span class="n">Shell</span><span class="p">(</span><span class="n">stderr</span><span class="o">=</span><span class="n">Shell</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">my_env</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span>
+
+<span class="n">shell</span><span class="o">.</span><span class="n">wget</span><span class="p">(</span><span class="s2">&quot;http://google.com&quot;</span><span class="p">,</span> <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;google.html&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="python-compatibility">
+<h2>Python compatibility<a class="headerlink" href="#python-compatibility" title="Permalink to this headline">¶</a></h2>
+<p>Whelk is compatible with python 3.4 and up, python 2 is no longer supported. If
+you find an incompatibility, please report a bug at
+<a class="reference external" href="https://github.com/seveas/whelk">https://github.com/seveas/whelk</a>.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2010-2020, Dennis Kaarsemaker.
+
+    </p>
+  </div> 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
